@@ -1,0 +1,168 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Parameter selection</title>
+  <meta charset="utf-8">
+
+<link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+<script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+<!------ Include the above in your HEAD tag ---------->
+
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.0.8/css/all.css">
+</head>
+<body>
+
+<div class="container">
+<br>  <p class="text-center"> <h2>Admin panel</h2></a></p>
+<hr>
+
+<div class="row">
+	<aside class="col-sm-4">
+<p>Users</p>
+
+
+<div class="card">
+	<article class="card-group-item">
+		<header class="card-header">
+			<h6 class="title">Admins 
+			
+			</h6>
+		</header>
+		<div class="filter-content">
+			<div class="list-group list-group-flush">
+				
+			{%for i in range(0, number_admin)%}
+			
+			
+			    <a href="#" class="list-group-item">{{list_admin[i]}} </a>
+			
+			{%endfor%}
+			
+	
+			<div align=right> 
+			<button type="button" id="newadminbutton" class="btn btn-primary">Add Admin</button>
+			</div>
+
+			</div> <!-- card-body.// -->
+		</div>
+	</article> <!-- card-group-item.// -->
+	
+	<article class="card-group-item">
+		<header class="card-header">
+			<h6 class="title">Normal users</h6>
+		</header>
+		
+		<div class="filter-content">
+			<div class="list-group list-group-flush">
+				
+			{%for i in range(0, number_users)%}
+			
+			
+			    <a href="#" class="list-group-item">{{list_users[i]}} </a>
+			
+			{%endfor%}
+			
+		
+			<div align=right> 
+			<button type="button" id="add_user_button" class="btn btn-primary">Add User</button>
+			</div>
+			
+			</div> <!-- card-body.// -->
+		</div>
+	</article> <!-- card-group-item.// -->
+</div> <!-- card.// -->
+
+
+
+
+	</aside> <!-- col.// -->
+	<aside class="col-sm-4">
+<p>Datasets</p>
+
+
+<div class="card">
+	<article class="card-group-item">
+		<header class="card-header"><h6 class="title">Datasets</h6></header>
+		<div class="filter-content">
+			<div class="list-group list-group-flush">
+				
+			{%for i in range(0, number_datasets)%}
+			
+			
+			    <a href="#" class="list-group-item">{{list_datasets[i]}} </a>
+			
+			{%endfor%}
+			
+		
+			</div>
+	</article> <!-- card-group-item.// -->
+	<article class="card-group-item">
+		<header class="card-header"><h6 class="title">Options</h6></header>
+		<div class="filter-content">
+			<div class="card-body">
+				<button type="button" id="newdatasetbutton" class="btn btn-primary">Add dataset</button>
+				
+				<button type="button" id="assigndatasetsetbutton" class="btn btn-primary">Assign dataset</button>
+
+			</div> <!-- card-body.// -->
+		</div>
+	</article> <!-- card-group-item.// -->
+</div> <!-- card.// -->
+
+
+
+	</aside> <!-- col.// -->
+	<!--<aside class="col-sm-4">
+
+</div> <!-- row.// -->
+
+</div> 
+<!--container end.//-->
+
+
+</body>
+</html>
+
+
+<script type="text/javascript">
+$( "#assigndatasetsetbutton" ).attr('data-buttonlink', '{{url_for('assign_dataset')}}')
+
+
+$( "#assigndatasetsetbutton" ).click(function() {
+  const buttonlink = $("#assigndatasetsetbutton").data('buttonlink')
+
+  window.open(buttonlink)
+});
+
+$( "#newdatasetbutton" ).attr('data-buttonlink', '{{url_for('create_dataset')}}')
+
+
+$( "#newdatasetbutton" ).click(function() {
+  const buttonlink = $("#newdatasetbutton").data('buttonlink')
+
+  window.open(buttonlink)
+});
+
+
+$( "#newadminbutton" ).attr('data-buttonlink', '{{url_for('add_admin')}}')
+
+
+$( "#newadminbutton" ).click(function() {
+  const buttonlink = $("#newadminbutton").data('buttonlink')
+
+  window.open(buttonlink)
+});
+
+
+$( "#add_user_button" ).attr('data-buttonlink', '{{url_for('register')}}')
+$( "#add_user_button" ).click(function() {
+  const buttonlink = $("#add_user_button").data('buttonlink')
+
+  window.open(buttonlink)
+});
+
+</script>
+
+
