@@ -43,6 +43,7 @@
 	
 			<div align=right> 
 			<button type="button" id="newadminbutton" class="btn btn-primary">Add Admin</button>
+			<button type="button" id="remove_admin_button" class="btn btn-danger">Remove Admin</button>
 			</div>
 
 			</div> <!-- card-body.// -->
@@ -67,6 +68,8 @@
 		
 			<div align=right> 
 			<button type="button" id="add_user_button" class="btn btn-primary">Add User</button>
+
+			<button type="button" id="remove_user_button" class="btn btn-danger">Remove User</button>
 			</div>
 			
 			</div> <!-- card-body.// -->
@@ -155,6 +158,22 @@ $( "#newadminbutton" ).click(function() {
   window.open(buttonlink)
 });
 
+
+$( "#remove_admin_button" ).attr('data-buttonlink', '{{url_for('remove_admin')}}')
+
+$( "#remove_admin_button" ).click(function() {
+  const buttonlink = $("#remove_admin_button").data('buttonlink')
+
+  window.open(buttonlink)
+});
+
+$( "#remove_user_button" ).attr('data-buttonlink', '{{url_for('remove_user')}}')
+
+$( "#remove_user_button" ).click(function() {
+  const buttonlink = $("#remove_user_button").data('buttonlink')
+
+  window.open(buttonlink)
+});
 
 $( "#add_user_button" ).attr('data-buttonlink', '{{url_for('register')}}')
 $( "#add_user_button" ).click(function() {

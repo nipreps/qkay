@@ -70,7 +70,7 @@ $( '#btn-submit' ).click( function() {
     // disable developement releases
     var authorization = $(this).val();
     var ratingReq = new XMLHttpRequest();
-    ratingReq.open("POST", "http://127.0.0.1:5000/receive_rating");
+    ratingReq.open("POST", "http://IP_ADDRESS:5000/receive_rating");
     ratingReq.setRequestHeader("Content-Type", "application/json;charset=UTF-8");
     ratingReq.setRequestHeader("Authorization", authorization);
     ratingReq.onload = function () {

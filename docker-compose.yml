@@ -1,0 +1,35 @@
+version: '2.1'
+services:
+  app:
+    #restart: always
+    build: .
+
+    ports:
+      - "5000:5000"
+    expose:
+      - "5000"
+    volumes:
+      - .:/app
+      - /home/esavary/Projects/MRIQC-outputs:/datasets
+
+
+    command: python qkay.py
+    links:
+      - db
+
+
+
+  db:
+    image: mongo:latest
+    #: mongodb
+    #hostname: mongodb
+    command: mongod --bind_ip_all
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - db-data:/home/esavary/Mongo_databases/db/
+
+volumes:
+  db-data:
+
