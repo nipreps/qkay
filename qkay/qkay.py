@@ -330,8 +330,7 @@ def patch_javascript_submit_button(
     h_name = socket.gethostname()
     IP_address = socket.gethostbyname(h_name)
     js_patch = js_patch.replace("IP_ADDRESS", str(IP_address))
-    with open("test.txt", "w") as file:
-        file.write(js_patch)
+    
 
     script_tag.string = js_patch
     if anonymized:

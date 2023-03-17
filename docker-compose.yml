@@ -16,6 +16,9 @@ services:
     command: python qkay.py
     links:
       - db
+    networks:
+      - frontend
+      - backend
 
 
 
@@ -29,7 +32,40 @@ services:
       - "27017:27017"
     volumes:
       - db-data:/home/esavary/Mongo_databases/db/
+    networks:
+      - backend
+
+
+  webserver:
+    build:
+      context: nginx
+      dockerfile: Dockerfile
+    image: digitalocean.com/webserver:latest
+    container_name: webserver
+    restart: unless-stopped
+    environment:
+      APP_ENV: "prod"
+      APP_NAME: "webserver"
+      APP_DEBUG: "true"
+      SERVICE_NAME: "webserver"
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - nginxdata:/var/log/nginx
+    depends_on:
+      - app
+    networks:
+      - frontend
+
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
 
 volumes:
   db-data:
+  nginxdata:
 
