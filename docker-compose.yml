@@ -10,7 +10,7 @@ services:
       - "5000"
     volumes:
       - .:/app
-      - /home/esavary/Projects/MRIQC-outputs:/datasets
+      - $DATASETS_PATH:/datasets
 
 
     command: python qkay.py
@@ -31,7 +31,7 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - db-data:/home/esavary/Mongo_databases/db/
+      - db-data:$DB_PATH
     networks:
       - backend
 
