@@ -55,6 +55,7 @@ from mongoengine.queryset.visitor import Q
 import numpy as np
 from bs4 import BeautifulSoup
 import copy
+import socket
 
 template_folder = "../"
 
@@ -62,8 +63,8 @@ template_folder = "../"
 app = Flask(__name__, template_folder=template_folder)
 
 app.config["MONGODB_SETTINGS"] = {
-    "db": "data_base_visual_app",
-    "host": "localhost",
+    "db": "data_base_qkay",
+    "host": "db",
     "port": 27017,
 }
 app.config.update(SECRET_KEY=os.urandom(24))
@@ -265,6 +266,19 @@ class RegistrationForm(FlaskForm):
             flash("Please use a different username.")
 
 
+class ChangepswForm(FlaskForm):
+    """
+    Form for password change
+    """
+
+    old_password = PasswordField("Old password", validators=[DataRequired()])
+    password = PasswordField("New password", validators=[DataRequired()])
+    password2 = PasswordField(
+        "Repeat new password", validators=[DataRequired(), EqualTo("password")]
+    )
+    submit = SubmitField("Change password")
+
+
 def patch_javascript_submit_button(
     path_html_file, username, dataset_name, report_name_original, anonymized=False
 ):
@@ -311,8 +325,12 @@ def patch_javascript_submit_button(
     soup.find(id="btn-download").decompose()
 
     script_tag = soup.body.script
-    with open("./scripts_js/script_button_rating_widget.txt", "r") as file:
+    with open("./scripts_js/script_button_rating_widget_template.txt", "r") as file:
         js_patch = file.read()
+    h_name = socket.gethostname()
+    IP_address = socket.gethostbyname(h_name)
+    js_patch = js_patch.replace("IP_ADDRESS", str(IP_address))
+    
 
     script_tag.string = js_patch
     if anonymized:
@@ -351,6 +369,19 @@ def login():
     """
 
     form = LoginForm()
+    if not User.objects(Q(is_admin=True)).values_list("username"):
+        if not User.objects(Q(username="Admin")).values_list("username"):
+            admin = User(
+                username="Admin",
+                password=generate_password_hash("abcd"),
+                is_admin=True,
+            )
+            admin.save()
+    else:
+        admin = User.objects(username="Admin").first()
+        admin.is_admin = True
+        admin.save()
+
     if current_user.is_authenticated:
         return redirect("/" + current_user.username)
     if request.method == "POST":
@@ -382,18 +413,53 @@ def register():
 
     if request.method == "POST":
         if form.validate_on_submit():
-            user = User(
-                username=form.username.data,
-                password=generate_password_hash(form.password.data),
-            )
-            user.save()
-            if not os.path.exists("./templates/templates_user_" + form.username.data):
-                os.makedirs("./templates/templates_user_" + form.username.data)
-            flash("Congratulations, you are now a registered user!")
-            return redirect("/login")
+            user_with_same_username = User.objects(username=form.username.data).first()
+            if not user_with_same_username:
+                user = User(
+                    username=form.username.data,
+                    password=generate_password_hash(form.password.data),
+                )
+                user.save()
+                if not os.path.exists(
+                    "/templates/templates_user_" + form.username.data
+                ):
+                    os.makedirs("./templates/templates_user_" + form.username.data)
+                flash("Congratulations, you are now a registered user!")
+                return redirect("/login")
+            else:
+                flash("Username already existing, please login")
+                return redirect("/login")
 
     return render_template(
         os.path.relpath("./templates/register.html", template_folder), form=form
+    )
+
+
+@app.route("/change_pwd", methods=["POST", "GET"])
+def change_psw():
+    """
+    route the app to the register form page
+    """
+
+    form = ChangepswForm()
+    username_1 = current_user.username
+    if request.method == "POST":
+        if current_user.is_authenticated:
+            if form.validate_on_submit():
+                if current_user.check_password(form.old_password.data):
+                    user = User.objects(Q(username=current_user.username))
+                    user.update_one(
+                        set__password=generate_password_hash(form.password.data)
+                    )
+                    return redirect("/login")
+
+        else:
+            return redirect("/login")
+
+    return render_template(
+        os.path.relpath("./templates/change_psw.html", template_folder),
+        form=form,
+        username=username_1,
     )
 
 
@@ -422,6 +488,48 @@ def add_admin():
             os.path.relpath("./templates/add_admin.html", template_folder),
             number_users=len(list_users),
             list_users=list_users,
+        )
+    else:
+        return redirect("/login")
+
+
+@app.route("/remove_admin", methods=["POST", "GET"])
+@login_required
+def remove_admin():
+    """
+    route the app to the admin management page
+    """
+    if current_user.is_admin:
+        list_admin = User.objects(Q(is_admin=True)).values_list("username")
+        if request.method == "POST":
+            username_selected = list_admin[int(request.form.get("users dropdown"))]
+            user = User.objects(Q(username=username_selected))
+            user.update_one(set__is_admin=False)
+        return render_template(
+            os.path.relpath("./templates/remove_admin.html", template_folder),
+            number_users=len(list_admin),
+            list_users=list_admin,
+        )
+    else:
+        return redirect("/login")
+
+
+@app.route("/remove_user", methods=["POST", "GET"])
+@login_required
+def remove_user():
+    """
+    route the app to the admin management page
+    """
+    if current_user.is_admin:
+        list_user = User.objects.all().values_list("username")
+        if request.method == "POST":
+            username_selected = list_user[int(request.form.get("users dropdown"))]
+            user = User.objects(Q(username=username_selected))
+            user.delete()
+        return render_template(
+            os.path.relpath("./templates/remove_admin.html", template_folder),
+            number_users=len(list_user),
+            list_users=list_user,
         )
     else:
         return redirect("/login")
@@ -675,4 +783,6 @@ def receive_report():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.jinja_env.auto_reload = True
+    app.config["TEMPLATES_AUTO_RELOAD"] = True
+    app.run(debug=True, host="0.0.0.0", port=5000)
