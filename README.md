@@ -6,11 +6,13 @@ To run the Qkay package using Docker Compose, you'll need to have Docker and Doc
 [Docker](https://docs.docker.com/get-docker/)
 [Docker-compose](https://docs.docker.com/compose/install/)
 # Usage
+The file .env must be updated with the path to the MongoDB database and the path to the folder containing all datasets before running the application.
+
 Run the containers with Docker Compose:
 ```
 $ docker-compose up
 ```
-The application is available on  http://IP_address_docker_comtainer:5000, where IP_address_docker_container is the IP address of the Flask container.
+The application is available on  http://IP_address_docker_container:5000, where IP_address_docker_container is the IP address of the Flask container.
 
 # Contributing
 We welcome contributions to Qkay. Please read the [contributing guide](https://github.com/nipreps/qkay/blob/docker-version/CONTRIBUTING.md) to get started.
