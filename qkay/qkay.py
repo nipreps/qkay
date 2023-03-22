@@ -411,7 +411,8 @@ def register():
 
     form = RegistrationForm()
     if current_user.is_authenticated:
-        return redirect("/login")
+        logout_user()
+
 
     if request.method == "POST":
         if form.validate_on_submit():

@@ -130,8 +130,7 @@
             <iframe id="report_frame" class="current" src=""></iframe>
         </div>
         <div id="index">
-            <input class='file-upload-button' type="file" id="file-btn" hidden />
-            <label for="file-btn">Choose File</label>
+            <a class="btn btn-primary" role="button" id="logout-btn">Logout</a>
             <a class="btn btn-primary" role="button" id="btn-save">Home</a>
             <h1 class="mt-5 mb-2">Index of reports</h1>
             <table id="results">
@@ -224,6 +223,10 @@
 
     $('#btn-save').click(function () {
         location.href = "{{url_home}}";
+    });
+
+     $('#logout-btn').click(function () {
+        location.href = "{{url_for('logout')}}";
     });
 
     //Upload the config and actualize 

@@ -1,6 +1,6 @@
 $('#qcslider').on('input', function() {
 
-    if ( (Date.now() - timestamp) / 1000 > 10) {
+    if ( (Date.now() - timestamp) / 1000 > 1) {
         $('#btn-submit').removeAttr('disabled');
     };
 
@@ -25,7 +25,7 @@ $('#qcslider').on('input', function() {
 });
 
 $('#confidence').on('input', function() {
-    if ( (Date.now() - timestamp) / 1000 > 10) {
+    if ( (Date.now() - timestamp) / 1000 > 1) {
         $('#btn-submit').removeAttr('disabled');
     };
 
@@ -47,7 +47,7 @@ $('#confidence').on('input', function() {
 
 
 $('#widget-comments').bind('input propertychange', function() {
-    if ( (Date.now() - timestamp) / 1000 > 10) {
+    if ( (Date.now() - timestamp) / 1000 > 1) {
         $('#btn-submit').removeAttr('disabled');
     };
 });
