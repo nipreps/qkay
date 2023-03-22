@@ -3,7 +3,7 @@ services:
   app:
     #restart: always
     build: .
-
+    restart: always
     ports:
       - "5000:5000"
     expose:
@@ -13,7 +13,7 @@ services:
       - $DATASETS_PATH:/datasets
 
 
-    command: python qkay.py
+    #command: python qkay.py
     links:
       - db
     networks:
@@ -37,22 +37,11 @@ services:
 
 
   webserver:
-    build:
-      context: nginx
-      dockerfile: Dockerfile
-    image: digitalocean.com/webserver:latest
     container_name: webserver
-    restart: unless-stopped
-    environment:
-      APP_ENV: "prod"
-      APP_NAME: "webserver"
-      APP_DEBUG: "true"
-      SERVICE_NAME: "webserver"
+    restart: always
+    build: ./nginx
     ports:
       - "80:80"
-      - "443:443"
-    volumes:
-      - nginxdata:/var/log/nginx
     depends_on:
       - app
     networks:

@@ -12,7 +12,7 @@ Run the containers with Docker Compose:
 ```
 $ docker-compose up
 ```
-The application is available on  http://IP_address_docker_container:5000, where IP_address_docker_container is the IP address of the Flask container.
+The application will be reachable on  http://localhost.
 
 # Contributing
 We welcome contributions to Qkay. Please read the [contributing guide](https://github.com/nipreps/qkay/blob/docker-version/CONTRIBUTING.md) to get started.

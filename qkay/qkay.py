@@ -66,6 +66,8 @@ app.config["MONGODB_SETTINGS"] = {
     "db": "data_base_qkay",
     "host": "db",
     "port": 27017,
+    "connect": False,
+
 }
 app.config.update(SECRET_KEY=os.urandom(24))
 db = MongoEngine()
@@ -329,7 +331,7 @@ def patch_javascript_submit_button(
         js_patch = file.read()
     h_name = socket.gethostname()
     IP_address = socket.gethostbyname(h_name)
-    js_patch = js_patch.replace("IP_ADDRESS", str(IP_address))
+    js_patch = js_patch.replace("IP_ADDRESS", "localhost")
     
 
     script_tag.string = js_patch
