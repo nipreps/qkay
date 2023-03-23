@@ -487,6 +487,7 @@ def add_admin():
             username_selected = list_users[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=True)
+            return redirect("/admin_panel")
         return render_template(
             os.path.relpath("./templates/add_admin.html", template_folder),
             number_users=len(list_users),
@@ -508,6 +509,8 @@ def remove_admin():
             username_selected = list_admin[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=False)
+            return redirect("/admin_panel")
+
         return render_template(
             os.path.relpath("./templates/remove_admin.html", template_folder),
             number_users=len(list_admin),
@@ -529,13 +532,37 @@ def remove_user():
             username_selected = list_user[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.delete()
+            return redirect("/admin_panel")
         return render_template(
-            os.path.relpath("./templates/remove_admin.html", template_folder),
+            os.path.relpath("./templates/remove_user.html", template_folder),
             number_users=len(list_user),
             list_users=list_user,
         )
     else:
         return redirect("/login")
+
+
+@app.route("/remove_dataset", methods=["POST", "GET"])
+@login_required
+def remove_dataset():
+    """
+    route the app to the admin management page
+    """
+    if current_user.is_admin:
+        list_dataset = Dataset.objects.all().values_list("name")
+        if request.method == "POST":
+            name_selected = list_dataset[int(request.form.get("users dropdown"))]
+            dataset = Dataset.objects(Q(name=name_selected))
+            dataset.delete()
+            return redirect("/admin_panel")
+        return render_template(
+            os.path.relpath("./templates/remove_dataset.html", template_folder),
+            number_dataset=len(list_dataset),
+            list_dataset=list_dataset,
+        )
+    else:
+        return redirect("/login")
+
 
 
 @app.route("/index-<username>/A-<report_name>")
@@ -696,6 +723,7 @@ def create_dataset():
         dataset_path = request.form["path"]
         dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
         dataset.save()
+        return redirect("/admin_panel")
     return render_template(
         os.path.relpath("./templates/create_dataset.html", template_folder)
     )
@@ -751,6 +779,7 @@ def assign_dataset():
             index_rated_reports=index_rated_reports,
         )
         inspection.save()
+        return redirect("/admin_panel")
 
     return render_template(
         os.path.relpath("./templates/assign_dataset.html", template_folder),
