@@ -52,7 +52,7 @@
 <div class="container">
   <main>
     <div class="py-5 text-center">
-      <h2>Add admin</h2>
+      <h2>Remove user</h2>
     </div>
 
     <div class="row g-5">
@@ -62,7 +62,7 @@
       <form action="", method="post">
 
 <select class="form-select form-select-lg mb-3" name="users dropdown" aria-label="users dropdown">
-	<option selected>Users</option>
+	<option selected>User</option>
 	{%for i in range(0, number_users)%}
 			
 				<option value={{i}}>{{list_users[i]}}</option>
@@ -76,8 +76,10 @@
 
           <div class="row g-5">
 
-              <button class="btn btn-primary" type="submit">Promote to admin</button>
+              <button class="btn btn-primary" type="submit">Remove</button>
+
               <a href="/admin_panel " class="btn btn-info" role="button">Cancel</a>
+
           </div>
       </form>
 

@@ -27,7 +27,7 @@
 <hr>
 
 <div class="row">
-	<aside class="col-sm-4">
+	<aside class="col-sm-5">
 <p>Users</p>
 
 
@@ -89,7 +89,7 @@
 
 
 	</aside> <!-- col.// -->
-	<aside class="col-sm-4">
+	<aside class="col-sm-5">
 <p>Datasets</p>
 
 
@@ -116,6 +116,7 @@
 				<button type="button" id="newdatasetbutton" class="btn btn-primary">Add dataset</button>
 				
 				<button type="button" id="assigndatasetsetbutton" class="btn btn-primary">Assign dataset</button>
+				<button type="button" id="removedatasetsetbutton" class="btn btn-danger">Remove dataset</button>
 
 			</div> <!-- card-body.// -->
 		</div>
@@ -138,50 +139,37 @@
 
 
 <script type="text/javascript">
-$( "#assigndatasetsetbutton" ).attr('data-buttonlink', '{{url_for('assign_dataset')}}')
+
+$('#assigndatasetsetbutton').click(function () {
+        location.href = "{{url_for('assign_dataset')}}";
+    });
 
 
-$( "#assigndatasetsetbutton" ).click(function() {
-  const buttonlink = $("#assigndatasetsetbutton").data('buttonlink')
 
-  window.open(buttonlink)
-});
-
-$( "#newdatasetbutton" ).attr('data-buttonlink', '{{url_for('create_dataset')}}')
+$('#removedatasetsetbutton').click(function () {
+        location.href = "{{url_for('remove_dataset')}}";
+    });
 
 
-$( "#newdatasetbutton" ).click(function() {
-  const buttonlink = $("#newdatasetbutton").data('buttonlink')
+$('#newdatasetbutton').click(function () {
+        location.href = "{{url_for('create_dataset')}}";
+    });
 
-  window.open(buttonlink)
-});
+$('#newadminbutton').click(function () {
+        location.href = "{{url_for('add_admin')}}";
+    });
 
-
-$( "#newadminbutton" ).attr('data-buttonlink', '{{url_for('add_admin')}}')
-
-
-$( "#newadminbutton" ).click(function() {
-  const buttonlink = $("#newadminbutton").data('buttonlink')
-
-  window.open(buttonlink)
-});
+$('#remove_admin_button').click(function () {
+        location.href = "{{url_for('remove_admin')}}";
+    });
 
 
-$( "#remove_admin_button" ).attr('data-buttonlink', '{{url_for('remove_admin')}}')
+$('#remove_user_button').click(function () {
+        location.href = "{{url_for('remove_user')}}";
+    });
 
-$( "#remove_admin_button" ).click(function() {
-  const buttonlink = $("#remove_admin_button").data('buttonlink')
 
-  window.open(buttonlink)
-});
 
-$( "#remove_user_button" ).attr('data-buttonlink', '{{url_for('remove_user')}}')
-
-$( "#remove_user_button" ).click(function() {
-  const buttonlink = $("#remove_user_button").data('buttonlink')
-
-  window.open(buttonlink)
-});
 
 $( "#add_user_button" ).attr('data-buttonlink', '{{url_for('register')}}')
 $( "#add_user_button" ).click(function() {
