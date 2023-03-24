@@ -169,14 +169,10 @@ $('#remove_user_button').click(function () {
     });
 
 
+$('#add_user_button').click(function () {
+        location.href = "{{url_for('register_new_user')}}";
+    });
 
-
-$( "#add_user_button" ).attr('data-buttonlink', '{{url_for('register')}}')
-$( "#add_user_button" ).click(function() {
-  const buttonlink = $("#add_user_button").data('buttonlink')
-
-  window.open(buttonlink)
-});
 
 </script>
 
