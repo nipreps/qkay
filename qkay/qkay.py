@@ -442,6 +442,45 @@ def register():
     )
 
 
+
+
+@app.route("/register_new_user", methods=["POST", "GET"])
+def register_new_user():
+    """
+    route the app to the register form page
+    """
+
+    form = RegistrationForm()
+
+    if request.method == "POST":
+        if form.validate_on_submit():
+            user_with_same_username = User.objects(username=form.username.data).first()
+            if not user_with_same_username:
+                user = User(
+                    username=form.username.data,
+                    password=generate_password_hash(form.password.data),
+                )
+                user.save()
+                if not os.path.exists(
+                    "/templates/templates_user_" + form.username.data
+                ):
+                    os.makedirs("./templates/templates_user_" + form.username.data)
+                flash("Congratulations, you are now a registered user!")
+                return redirect("/admin_panel")
+            else:
+                flash("Username already existing, please login")
+                return redirect("/admin_panel")
+
+    return render_template(
+        os.path.relpath("./templates/register_new_user.html", template_folder), form=form
+    )
+
+
+
+
+
+
+
 @app.route("/change_pwd", methods=["POST", "GET"])
 def change_psw():
     """
@@ -558,6 +597,10 @@ def remove_dataset():
             name_selected = list_dataset[int(request.form.get("users dropdown"))]
             dataset = Dataset.objects(Q(name=name_selected))
             dataset.delete()
+            inspections = Inspection.objects(Q(dataset=name_selected))
+            for inspection in inspections:
+                inspection.delete()
+
             return redirect("/admin_panel")
         return render_template(
             os.path.relpath("./templates/remove_dataset.html", template_folder),
