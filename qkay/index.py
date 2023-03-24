@@ -65,5 +65,17 @@ def anonymize_reports(shuffled_list, dataset_name):
     return anonymized_report_list
 
 
+def repeat_reports(original_list, number_of_subjects_to_repeat):
+    day = 220830
+    time = 543417
+    random.seed(day + time)
+
+    # Randomly select subjects that will be shown twice
+    subset_rep = random.sample(original_list, number_of_subjects_to_repeat)
+
+    original_list.extend(subset_rep)
+    return original_list
+
+
 if __name__ == "__main__":
     pass
