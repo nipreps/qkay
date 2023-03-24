@@ -50,6 +50,7 @@ from index import (
     list_individual_reports,
     shuffle_reports,
     anonymize_reports,
+    repeat_reports,
 )
 from mongoengine.queryset.visitor import Q
 import numpy as np
@@ -314,6 +315,9 @@ def patch_javascript_submit_button(
         parent_para = summary_para.parent
         parent_para.li.extract()
         parent_para.li.extract()
+
+        iqm_para= soup.find(id="iqms-table")
+        iqm_para.decompose()
 
     button_container = soup.find(id="btn-post").parent
     new_button_tag = soup.new_tag("button")
@@ -622,7 +626,7 @@ def home():
     """
     display home page
     """
-    return render_template(os.path.relpath("./templates/welcome.html", template_folder))
+    return redirect("/login")
 
 
 @app.route("/<username>")
@@ -749,19 +753,20 @@ def assign_dataset():
 
         names_files = list_individual_reports(dataset_path)
         new_names = names_files
-
+        if rate_all:
+            names_repeated=repeat_reports(new_names,40)
+        else:
+            names_repeated=names_files
         if randomize:
-            names_shuffled = shuffle_reports(new_names, random_seed)
+            names_shuffled = shuffle_reports(names_repeated, random_seed)
         else:
-            names_shuffled = names_files
+            names_shuffled = names_repeated
         if blind:
-            names_anonymized = anonymize_reports(new_names, dataset_selected)
+            names_anonymized = anonymize_reports(names_repeated, dataset_selected)
         else:
-            names_anonymized = new_names
-        if not rate_all:
-            pass
-        else:
-            names_subsample = names_files
+            names_anonymized = names_repeated
+
+        names_subsample=names_repeated
 
         index_rated_reports = [False] * len(names_files)
 
