@@ -768,11 +768,27 @@ def create_dataset():
     if request.method == "POST":
         dataset_name = request.form["name"]
         dataset_path = request.form["path"]
-        dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
-        dataset.save()
-        return redirect("/admin_panel")
+        try:
+            secondfile=os.listdir(dataset_path)[1]
+            dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
+            dataset.save()
+            return redirect("/admin_panel")
+        except:
+            return redirect("/empty_dataset")
+
+
     return render_template(
         os.path.relpath("./templates/create_dataset.html", template_folder)
+    )
+
+@app.route("/empty_dataset", methods=["POST", "GET"])
+@login_required
+def empty_dataset():
+    """
+    display an error message when the dataset is empty
+    """
+    return render_template(
+        os.path.relpath("./templates/error_empty_dataset.html", template_folder)
     )
 
 
