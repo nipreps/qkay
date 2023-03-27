@@ -152,7 +152,7 @@ class Inspection(db.Document):
 
     Attributes
     ----------
-
+git rebase --abort
     meta : dict
         mongodb collection
     dataset : str
