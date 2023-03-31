@@ -34,22 +34,22 @@
 <div class="card">
 	<article class="card-group-item">
 		<header class="card-header">
-			<h6 class="title">Admins 
-			
+			<h6 class="title">Admins
+
 			</h6>
 		</header>
 		<div class="filter-content">
 			<div class="list-group list-group-flush">
-				
+
 			{%for i in range(0, number_admin)%}
-			
-			
+
+
 			    <a href="#" class="list-group-item">{{list_admin[i]}} </a>
-			
+
 			{%endfor%}
-			
-	
-			<div align=right> 
+
+
+			<div align=right>
 			<button type="button" id="newadminbutton" class="btn btn-primary">Add Admin</button>
 			<button type="button" id="remove_admin_button" class="btn btn-danger">Remove Admin</button>
 			</div>
@@ -57,29 +57,29 @@
 			</div> <!-- card-body.// -->
 		</div>
 	</article> <!-- card-group-item.// -->
-	
+
 	<article class="card-group-item">
 		<header class="card-header">
 			<h6 class="title">Normal users</h6>
 		</header>
-		
+
 		<div class="filter-content">
 			<div class="list-group list-group-flush">
-				
+
 			{%for i in range(0, number_users)%}
-			
-			
+
+
 			    <a href="#" class="list-group-item">{{list_users[i]}} </a>
-			
+
 			{%endfor%}
-			
-		
-			<div align=right> 
+
+
+			<div align=right>
 			<button type="button" id="add_user_button" class="btn btn-primary">Add User</button>
 
 			<button type="button" id="remove_user_button" class="btn btn-danger">Remove User</button>
 			</div>
-			
+
 			</div> <!-- card-body.// -->
 		</div>
 	</article> <!-- card-group-item.// -->
@@ -98,27 +98,45 @@
 		<header class="card-header"><h6 class="title">Datasets</h6></header>
 		<div class="filter-content">
 			<div class="list-group list-group-flush">
-				
+
 			{%for i in range(0, number_datasets)%}
-			
-			
+
+
 			    <a href="#" class="list-group-item">{{list_datasets[i]}} </a>
-			
+
+
+
 			{%endfor%}
-			
-		
+				<div align=right>
+			<button type="button" id="newdatasetbutton" class="btn btn-primary">Add dataset</button>
+
+				<button type="button" id="assigndatasetsetbutton" class="btn btn-primary">Assign dataset</button>
+				<button type="button" id="removedatasetsetbutton" class="btn btn-danger">Remove dataset</button>
+			</div> <!-- card-body.// -->
 			</div>
 	</article> <!-- card-group-item.// -->
 	<article class="card-group-item">
 		<header class="card-header"><h6 class="title">Options</h6></header>
 		<div class="filter-content">
-			<div class="card-body">
-				<button type="button" id="newdatasetbutton" class="btn btn-primary">Add dataset</button>
-				
-				<button type="button" id="assigndatasetsetbutton" class="btn btn-primary">Assign dataset</button>
-				<button type="button" id="removedatasetsetbutton" class="btn btn-danger">Remove dataset</button>
+		<div class="list-group list-group-flush">
 
-			</div> <!-- card-body.// -->
+			{%for i in range(0, number_inspection)%}
+
+
+			    <a href="#" class="list-group-item">{{list_inspection_dataset[i]}} -> {{list_inspection_username[i]}}</a>
+
+			{%endfor%}
+
+
+
+			<div class="filter-content">
+			<div align=right>
+
+				<button type="button" id="remove_inspection" class="btn btn-danger">Remove assignement</button>
+
+			</div>
+
+
 		</div>
 	</article> <!-- card-group-item.// -->
 </div> <!-- card.// -->
@@ -127,10 +145,9 @@
 
 	</aside> <!-- col.// -->
 	<!--<aside class="col-sm-4">
-
 </div> <!-- row.// -->
 
-</div> 
+</div>
 <!--container end.//-->
 
 
@@ -172,8 +189,9 @@ $('#remove_user_button').click(function () {
 $('#add_user_button').click(function () {
         location.href = "{{url_for('register_new_user')}}";
     });
-
+$('#remove_inspection').click(function () {
+        location.href = "{{url_for('remove_inspection')}}";
+    });
 
 </script>
-
 

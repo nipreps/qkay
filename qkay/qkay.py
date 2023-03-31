@@ -589,7 +589,7 @@ def remove_user():
 @login_required
 def remove_dataset():
     """
-    route the app to the admin management page
+    route the app to the remove dataset page
     """
     if current_user.is_admin:
         list_dataset = Dataset.objects.all().values_list("name")
@@ -609,6 +609,38 @@ def remove_dataset():
         )
     else:
         return redirect("/login")
+
+
+
+@app.route("/remove_inspection", methods=["POST", "GET"])
+@login_required
+def remove_inspection():
+    """
+    route the app to the remove inspection page
+    """
+    if current_user.is_admin:
+
+        list_inspection_username = Inspection.objects.all().values_list("username")
+        list_inspection_dataset=Inspection.objects.all().values_list("dataset")
+        list_inspection_id = Inspection.objects.all().values_list("id")
+        if request.method == "POST":
+            id_selected = list_inspection_id[int(request.form.get("users dropdown"))]
+            inspection = Inspection.objects(Q(id=id_selected))
+            inspection.delete()
+
+
+            return redirect("/admin_panel")
+
+
+        return render_template(
+            os.path.relpath("./templates/remove_inspection.html", template_folder),
+            number_inspection=len(list_inspection_username),
+            list_username=list_inspection_username,
+            list_dataset=list_inspection_dataset
+        )
+    else:
+        return redirect("/login")
+
 
 
 
@@ -745,6 +777,8 @@ def admin_panel():
         list_users = User.objects.all().values_list("username")
         list_datasets = Dataset.objects.all().values_list("name")
         list_admin = User.objects(Q(is_admin=True)).values_list("username")
+        list_inspection_username=Inspection.objects.all().values_list("username")
+        list_inspection_dataset = Inspection.objects.all().values_list("dataset")
         if request.method == "POST":
             pass
         return render_template(
@@ -755,6 +789,9 @@ def admin_panel():
             number_admin=len(list_admin),
             number_datasets=len(list_datasets),
             list_datasets=list_datasets,
+            list_inspection_username=list_inspection_username,
+            list_inspection_dataset=list_inspection_dataset,
+            number_inspection=len(list_inspection_username)
         )
     else:
         return redirect("/login")
