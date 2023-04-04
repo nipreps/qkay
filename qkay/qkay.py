@@ -68,7 +68,6 @@ app.config["MONGODB_SETTINGS"] = {
     "host": "db",
     "port": 27017,
     "connect": False,
-
 }
 app.config.update(SECRET_KEY=os.urandom(24))
 db = MongoEngine()
@@ -147,36 +146,36 @@ class Dataset(db.Document):
 
 class Inspection(db.Document):
     """
-    Class to define an inspection
-    ...
+        Class to define an inspection
+        ...
 
-    Attributes
-    ----------
-git rebase --abort
-    meta : dict
-        mongodb collection
-    dataset : str
-        name of the dataset to be inspected
-    username : str
-        name of the user assigned to the inspection
-    randomize : bool
-        If files must be shuffled
-    rate_all : bool
-        If all files must be rated
-    blind : bool
-        If reports must be anonymized
-    names_files : string list
-        list of filenames to grade
-    names_shuffled : string list
-        shuffled list of filenames
-    names_anonymized : string list
-        list of filenames anonymized and shuffled if randomize==True
-    names_subsample: string list
-        subsample of file to inspect if rate_all==False
-    random_seed: int
-        random seed used to shuffle the filename
-    index_rated_reports: list
-        index of reports already rated
+        Attributes
+        ----------
+    git rebase --abort
+        meta : dict
+            mongodb collection
+        dataset : str
+            name of the dataset to be inspected
+        username : str
+            name of the user assigned to the inspection
+        randomize : bool
+            If files must be shuffled
+        rate_all : bool
+            If all files must be rated
+        blind : bool
+            If reports must be anonymized
+        names_files : string list
+            list of filenames to grade
+        names_shuffled : string list
+            shuffled list of filenames
+        names_anonymized : string list
+            list of filenames anonymized and shuffled if randomize==True
+        names_subsample: string list
+            subsample of file to inspect if rate_all==False
+        random_seed: int
+            random seed used to shuffle the filename
+        index_rated_reports: list
+            index of reports already rated
     """
 
     meta = {"collection": "inspections"}
@@ -283,7 +282,12 @@ class ChangepswForm(FlaskForm):
 
 
 def patch_javascript_submit_button(
-    path_html_file, username, dataset_name, report_name_original, anonymized=False
+    path_html_file,
+    username,
+    dataset_name,
+    report_name_original,
+    anonymized=False,
+    two_folders=False,
 ):
     """
     Modifies MRIQC widgets of a report and store the modified report in path_data
@@ -316,7 +320,7 @@ def patch_javascript_submit_button(
         parent_para.li.extract()
         parent_para.li.extract()
 
-        iqm_para= soup.find(id="iqms-table")
+        iqm_para = soup.find(id="iqms-table")
         iqm_para.decompose()
 
     button_container = soup.find(id="btn-post").parent
@@ -336,9 +340,15 @@ def patch_javascript_submit_button(
     h_name = socket.gethostname()
     IP_address = socket.gethostbyname(h_name)
     js_patch = js_patch.replace("IP_ADDRESS", "localhost")
-    
+    if two_folders:
+        js_patch_head = soup.head.findAll("script")[2]
+
+        js_patch_head.string = js_patch_head.string.replace(
+            'var sub = "sub-', 'var sub = "' + report_name_original[0:12] + "sub-"
+        )
 
     script_tag.string = js_patch
+
     if anonymized:
         path_data = (
             "./templates/templates_user_"
@@ -357,9 +367,12 @@ def patch_javascript_submit_button(
         )
     if not os.path.exists(path_data):
         os.makedirs(path_data)
-
-    with open(path_data + "/" + report_name_original, "w") as file:
-        file.write(str(soup))
+    if two_folders:
+        with open(path_data + "/" + report_name_original[12:], "w") as file:
+            file.write(str(soup))
+    else:
+        with open(path_data + "/" + report_name_original, "w") as file:
+            file.write(str(soup))
     return path_data
 
 
@@ -417,7 +430,6 @@ def register():
     if current_user.is_authenticated:
         logout_user()
 
-
     if request.method == "POST":
         if form.validate_on_submit():
             user_with_same_username = User.objects(username=form.username.data).first()
@@ -440,8 +452,6 @@ def register():
     return render_template(
         os.path.relpath("./templates/register.html", template_folder), form=form
     )
-
-
 
 
 @app.route("/register_new_user", methods=["POST", "GET"])
@@ -472,13 +482,9 @@ def register_new_user():
                 return redirect("/admin_panel")
 
     return render_template(
-        os.path.relpath("./templates/register_new_user.html", template_folder), form=form
+        os.path.relpath("./templates/register_new_user.html", template_folder),
+        form=form,
     )
-
-
-
-
-
 
 
 @app.route("/change_pwd", methods=["POST", "GET"])
@@ -611,7 +617,6 @@ def remove_dataset():
         return redirect("/login")
 
 
-
 @app.route("/remove_inspection", methods=["POST", "GET"])
 @login_required
 def remove_inspection():
@@ -621,27 +626,23 @@ def remove_inspection():
     if current_user.is_admin:
 
         list_inspection_username = Inspection.objects.all().values_list("username")
-        list_inspection_dataset=Inspection.objects.all().values_list("dataset")
+        list_inspection_dataset = Inspection.objects.all().values_list("dataset")
         list_inspection_id = Inspection.objects.all().values_list("id")
         if request.method == "POST":
             id_selected = list_inspection_id[int(request.form.get("users dropdown"))]
             inspection = Inspection.objects(Q(id=id_selected))
             inspection.delete()
 
-
             return redirect("/admin_panel")
-
 
         return render_template(
             os.path.relpath("./templates/remove_inspection.html", template_folder),
             number_inspection=len(list_inspection_username),
             list_username=list_inspection_username,
-            list_dataset=list_inspection_dataset
+            list_dataset=list_inspection_dataset,
         )
     else:
         return redirect("/login")
-
-
 
 
 @app.route("/index-<username>/A-<report_name>")
@@ -654,7 +655,6 @@ def display_report_anonymized(username, report_name):
     current_inspection = Inspection.objects(
         Q(dataset=dataset_name) & Q(username=username)
     )
-    anonymized_names = current_inspection.values_list("names_anonymized")
     original_names = current_inspection.values_list("names_shuffled")
     ind_name = np.where(np.array(anonymized_names[0]) == "A-" + report_name)
     report_name_original = np.array(original_names[0])[ind_name][0]
@@ -662,18 +662,33 @@ def display_report_anonymized(username, report_name):
         Dataset.objects(name=dataset_name).values_list("path_dataset")[0]
     )
     path_templates_mriqc = dataset_path + report_name_original
-    path_anonymized_data = patch_javascript_submit_button(
-        path_templates_mriqc,
-        username,
-        dataset_name,
-        report_name_original,
-        anonymized=True,
-    )
-    return render_template(
-        os.path.relpath(
-            path_anonymized_data + "/" + report_name_original, template_folder
+    if report_name_original.startswith("/condition"):
+        path_anonymized_data = patch_javascript_submit_button(
+            path_templates_mriqc,
+            username,
+            dataset_name,
+            report_name_original,
+            anonymized=True,
+            two_folders=True,
         )
-    )
+        return render_template(
+            os.path.relpath(
+                path_anonymized_data + "/" + report_name_original[12:], template_folder
+            )
+        )
+    else:
+        path_anonymized_data = patch_javascript_submit_button(
+            path_templates_mriqc,
+            username,
+            dataset_name,
+            report_name_original,
+            anonymized=True,
+        )
+        return render_template(
+            os.path.relpath(
+                path_anonymized_data + "/" + report_name_original, template_folder
+            )
+        )
 
 
 @app.route("/index-<username>/sub-<report_name>")
@@ -692,6 +707,56 @@ def display_report_non_anonymized(username, report_name):
     )
     return render_template(
         os.path.relpath(path_modified_template + "/sub-" + report_name, template_folder)
+    )
+
+
+@app.route("/condition1/<report_name>")
+@login_required
+def display_report_two_folder_non_anonymized_cond1(report_name):
+    """
+    display report sub-<subject_number>
+    """
+    username = current_user.username
+    user = User.objects(username=username).first()
+    dataset = user.current_dataset
+    dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
+
+    path_templates_mriqc = dataset_path + "/condition1/" + report_name
+    path_modified_template = patch_javascript_submit_button(
+        path_templates_mriqc,
+        username,
+        dataset,
+        "/condition1/" + report_name,
+        anonymized=False,
+        two_folders=True,
+    )
+    return render_template(
+        os.path.relpath(path_modified_template + "/" + report_name, template_folder)
+    )
+
+
+@app.route("/condition2/<report_name>")
+@login_required
+def display_report_two_folder_non_anonymized_cond2(report_name):
+    """
+    display report sub-<subject_number>
+    """
+    username = current_user.username
+    user = User.objects(username=username).first()
+    dataset = user.current_dataset
+    dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
+
+    path_templates_mriqc = dataset_path + "/condition2/" + report_name
+    path_modified_template = patch_javascript_submit_button(
+        path_templates_mriqc,
+        username,
+        dataset,
+        "/condition2/" + report_name,
+        anonymized=False,
+        two_folders=True,
+    )
+    return render_template(
+        os.path.relpath(path_modified_template + "/" + report_name, template_folder)
     )
 
 
@@ -777,7 +842,7 @@ def admin_panel():
         list_users = User.objects.all().values_list("username")
         list_datasets = Dataset.objects.all().values_list("name")
         list_admin = User.objects(Q(is_admin=True)).values_list("username")
-        list_inspection_username=Inspection.objects.all().values_list("username")
+        list_inspection_username = Inspection.objects.all().values_list("username")
         list_inspection_dataset = Inspection.objects.all().values_list("dataset")
         if request.method == "POST":
             pass
@@ -791,7 +856,7 @@ def admin_panel():
             list_datasets=list_datasets,
             list_inspection_username=list_inspection_username,
             list_inspection_dataset=list_inspection_dataset,
-            number_inspection=len(list_inspection_username)
+            number_inspection=len(list_inspection_username),
         )
     else:
         return redirect("/login")
@@ -806,17 +871,17 @@ def create_dataset():
         dataset_name = request.form["name"]
         dataset_path = request.form["path"]
         try:
-            secondfile=os.listdir(dataset_path)[1]
+            secondfile = os.listdir(dataset_path)[0]
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
             dataset.save()
             return redirect("/admin_panel")
         except:
             return redirect("/empty_dataset")
 
-
     return render_template(
         os.path.relpath("./templates/create_dataset.html", template_folder)
     )
+
 
 @app.route("/empty_dataset", methods=["POST", "GET"])
 @login_required
@@ -842,17 +907,18 @@ def assign_dataset():
         randomize = request.form.get("option_randomize")
         rate_all = request.form.get("option_rate_all")
         blind = request.form.get("option_blind")
+        two_datasets = request.form.get("option_two_datasets")
         random_seed = random.randint(0, 100000)
         dataset_path = str(
             Dataset.objects(name=dataset_selected).values_list("path_dataset")[0]
         )
 
-        names_files = list_individual_reports(dataset_path)
+        names_files = list_individual_reports(dataset_path, two_folders=two_datasets)
         new_names = names_files
         if rate_all:
-            names_repeated=repeat_reports(new_names,40)
+            names_repeated = repeat_reports(new_names, 40, two_folders=two_datasets)
         else:
-            names_repeated=names_files
+            names_repeated = names_files
         if randomize:
             names_shuffled = shuffle_reports(names_repeated, random_seed)
         else:
@@ -862,7 +928,7 @@ def assign_dataset():
         else:
             names_anonymized = names_repeated
 
-        names_subsample=names_repeated
+        names_subsample = names_repeated
 
         index_rated_reports = [False] * len(names_files)
 
@@ -900,15 +966,14 @@ def receive_report():
     request_data = request.get_json()
     username = current_user.username
     dataset = current_user.current_dataset
-
+    current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username))
+    shuffled_names = current_inspection.values_list("names_shuffled")
+    index_rated = np.array(current_inspection.values_list("index_rated_reports"))
     report = Rating()
     report = report.from_json(json.dumps(request_data))
     report.dataset = dataset
     report.rater_id = username
     report.save()
-    current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username))
-    index_rated = np.array(current_inspection.values_list("index_rated_reports"))
-    shuffled_names = current_inspection.values_list("names_shuffled")
     ind_name = np.where(np.array(shuffled_names[0]) == str(report.subject) + ".html")
     index_rated[0][ind_name] = True
     current_inspection.update_one(set__index_rated_reports=index_rated[0].tolist())
