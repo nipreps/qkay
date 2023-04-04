@@ -37,4 +37,4 @@ To run qkay using Docker Compose, follow these steps:
 # Contributing
 We welcome contributions to Qkay. Please read the [contributing guide](https://github.com/nipreps/qkay/blob/docker-version/CONTRIBUTING.md) to get started.
 # License
-Qkay is released under the Apache License.
+Qkay is released under the Apache 2.0 License.
