@@ -57,6 +57,7 @@ import numpy as np
 from bs4 import BeautifulSoup
 import copy
 import socket
+import base64
 
 template_folder = "../"
 
@@ -310,36 +311,68 @@ def patch_javascript_submit_button(
     -------
     path to the new report
     """
-
-    html_file = open(path_html_file)
+    with open(path_html_file, "r") as file:
+        html_file = file.read()
+    html_file=html_file.replace("unspecified",report_name_original[0:-5])
     soup = BeautifulSoup(html_file, "html.parser")
-    html_file.close()
+
+
+    # Find all img tags with SVG source
+    svg_tags = soup.find_all('img', {'src': lambda src: src.endswith('.svg')})
+
+    # Loop through each SVG tag
+    original_work_dir=os.getcwd()
+    html_file_dir= os.path.dirname(path_html_file)
+    os.chdir(html_file_dir)
+    for svg in svg_tags:
+        # Open the SVG file and read its contents
+        with open(svg['src'], 'rb') as file:
+            svg_data = file.read()
+
+        # Convert the SVG data to base64 encoding
+        base64_data = base64.b64encode(svg_data).decode('utf-8')
+
+        # Replace the SVG source with the base64-encoded data
+        svg['src'] = 'data:image/svg+xml;base64,' + base64_data
+    os.chdir(original_work_dir)
     if anonymized:
         summary_para = soup.find(id="summary")
-        parent_para = summary_para.parent
-        parent_para.li.extract()
-        parent_para.li.extract()
+        if summary_para:
+            parent_para = summary_para.parent
+            parent_para.li.extract()
+            parent_para.li.extract()
 
-        iqm_para = soup.find(id="iqms-table")
-        iqm_para.decompose()
+            iqm_para = soup.find(id="iqms-table")
+            iqm_para.decompose()
+        about_para= soup.find(id="About")
+        if about_para:
+            about_para.decompose()
 
-    button_container = soup.find(id="btn-post").parent
+    button_container = soup.find(id="btn-download").parent
     new_button_tag = soup.new_tag("button")
     new_button_tag["class"] = "btn btn-primary"
     new_button_tag["id"] = "btn-submit"
     new_button_tag["value"] = "8sSYVI0XjFqacEMZ8wF4"
     new_button_tag["disabled"] = ""
     new_button_tag.string = "Submit"
-    button_container.button.insert_after(new_button_tag)
-    soup.find(id="btn-post").decompose()
+    button_container.append(new_button_tag)
+    button_post=soup.find(id="btn-post")
+    if button_post:
+        button_post.decompose()
     soup.find(id="btn-download").decompose()
 
     script_tag = soup.body.script
-    with open("./scripts_js/script_button_rating_widget_template.txt", "r") as file:
-        js_patch = file.read()
-    h_name = socket.gethostname()
-    IP_address = socket.gethostbyname(h_name)
-    js_patch = js_patch.replace("IP_ADDRESS", "localhost")
+    if "MINIMUM_RATING_TIME" in script_tag.string:
+
+        with open("./scripts_js/script_button_rating_widget_template_new.txt", "r") as file:
+            js_patch = file.read()
+        js_patch = js_patch.replace("IP_ADDRESS", "localhost")
+
+        #js_patch=script_tag.string
+    else:
+        with open("./scripts_js/script_button_rating_widget_template.txt", "r") as file:
+            js_patch = file.read()
+        js_patch = js_patch.replace("IP_ADDRESS", "localhost")
     if two_folders:
         js_patch_head = soup.head.findAll("script")[2]
 
@@ -656,6 +689,10 @@ def display_report_anonymized(username, report_name):
         Q(dataset=dataset_name) & Q(username=username)
     )
     original_names = current_inspection.values_list("names_shuffled")
+    anonymized_names = current_inspection.values_list("names_anonymized")
+
+
+
     ind_name = np.where(np.array(anonymized_names[0]) == "A-" + report_name)
     report_name_original = np.array(original_names[0])[ind_name][0]
     dataset_path = str(
