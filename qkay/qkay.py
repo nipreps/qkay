@@ -18,46 +18,42 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
+import base64
+import json
+import os
+import random
+import sys
+
+import numpy as np
+from bs4 import BeautifulSoup
 from flask import (
     Flask,
-    render_template,
-    redirect,
-    url_for,
-    request,
-    jsonify,
     flash,
-    session,
-    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
 )
 from flask_login import (
     LoginManager,
-    login_required,
+    UserMixin,
     current_user,
+    login_required,
     login_user,
     logout_user,
 )
-import json
-import random
-import os
-from flask_login import UserMixin, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mongoengine import MongoEngine
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, InputRequired, EqualTo
-import sys
 from index import (
-    list_individual_reports,
-    shuffle_reports,
     anonymize_reports,
+    list_individual_reports,
     repeat_reports,
+    shuffle_reports,
 )
 from mongoengine.queryset.visitor import Q
-import numpy as np
-from bs4 import BeautifulSoup
-import copy
-import socket
-import base64
+from werkzeug.security import check_password_hash, generate_password_hash
+from wtforms import PasswordField, StringField, SubmitField
+from wtforms.validators import DataRequired, EqualTo
 
 template_folder = "../"
 
@@ -908,7 +904,6 @@ def create_dataset():
         dataset_name = request.form["name"]
         dataset_path = request.form["path"]
         try:
-            secondfile = os.listdir(dataset_path)[0]
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
             dataset.save()
             return redirect("/admin_panel")
