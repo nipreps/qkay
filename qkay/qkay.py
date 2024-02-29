@@ -22,7 +22,6 @@ import base64
 import json
 import os
 import random
-import sys
 
 import numpy as np
 from bs4 import BeautifulSoup
@@ -50,10 +49,28 @@ from index import (
     repeat_reports,
     shuffle_reports,
 )
+from logging.config import dictConfig
 from mongoengine.queryset.visitor import Q
 from werkzeug.security import check_password_hash, generate_password_hash
 from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, EqualTo
+
+
+dictConfig({
+    'version': 1,
+    'formatters': {'default': {
+        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
+    }},
+    'handlers': {'wsgi': {
+        'class': 'logging.StreamHandler',
+        'stream': 'ext://flask.logging.wsgi_errors_stream',
+        'formatter': 'default'
+    }},
+    'root': {
+        'level': 'INFO',
+        'handlers': ['wsgi']
+    }
+})
 
 template_folder = "../"
 
@@ -66,6 +83,7 @@ app.config["MONGODB_SETTINGS"] = {
     "port": 27017,
     "connect": False,
 }
+app.logger.info(f"MONGODB_SETTINGS: {app.config['MONGODB_SETTINGS']}")
 app.config.update(SECRET_KEY=os.urandom(24))
 db = MongoEngine()
 db.init_app(app)
@@ -439,8 +457,8 @@ def login():
 
         if form.validate_on_submit():
             user = User.objects(username=form.username.data).first()
-            print(form.password.data, file=sys.stderr)
             if user is None or not user.check_password(form.password.data):
+                app.logger.error("Invalid username or password")
                 flash("Invalid username or password")
                 return redirect(url_for("login"))
             login_user(user)
@@ -469,11 +487,7 @@ def register():
                     password=generate_password_hash(form.password.data),
                 )
                 user.save()
-                if not os.path.exists(
-                    "/templates/templates_user_" + form.username.data
-                ):
-                    os.makedirs("./templates/templates_user_" + form.username.data)
-                flash("Congratulations, you are now a registered user!")
+                app.logger.info('User %s registered', user.username)
                 return redirect("/login")
             else:
                 flash("Please login.", "error")
@@ -534,6 +548,7 @@ def change_psw():
                     user.update_one(
                         set__password=generate_password_hash(form.password.data)
                     )
+                    app.logger.info('Password changed')
                     return redirect("/login")
 
         else:
@@ -567,6 +582,7 @@ def add_admin():
             username_selected = list_users[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=True)
+            app.logger.info('User %s is now an admin', user.username)
             return redirect("/admin_panel")
         return render_template(
             os.path.relpath("./templates/add_admin.html", template_folder),
@@ -589,6 +605,7 @@ def remove_admin():
             username_selected = list_admin[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=False)
+            app.logger.info('User %s is no longer an admin', user.username)
             return redirect("/admin_panel")
 
         return render_template(
@@ -612,6 +629,7 @@ def remove_user():
             username_selected = list_user[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.delete()
+            app.logger.info('User %s has been deleted', username_selected)
             return redirect("/admin_panel")
         return render_template(
             os.path.relpath("./templates/remove_user.html", template_folder),
@@ -637,7 +655,7 @@ def remove_dataset():
             inspections = Inspection.objects(Q(dataset=name_selected))
             for inspection in inspections:
                 inspection.delete()
-
+            app.logger.info('Dataset %s has been deleted', name_selected)
             return redirect("/admin_panel")
         return render_template(
             os.path.relpath("./templates/remove_dataset.html", template_folder),
@@ -663,7 +681,7 @@ def remove_inspection():
             id_selected = list_inspection_id[int(request.form.get("users dropdown"))]
             inspection = Inspection.objects(Q(id=id_selected))
             inspection.delete()
-
+            app.logger.info('Inspection %s has been deleted', id_selected)
             return redirect("/admin_panel")
 
         return render_template(
@@ -908,8 +926,10 @@ def create_dataset():
         try:
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
             dataset.save()
+            app.logger.info('New dataset named %s created from %s.', dataset_name, dataset_path)
             return redirect("/admin_panel")
         except:
+            app.logger.error('Error creating dataset named %s from %s.', dataset_name, dataset_path)
             return redirect("/empty_dataset")
 
     return render_template(
@@ -980,6 +1000,7 @@ def assign_dataset():
             index_rated_reports=index_rated_reports,
         )
         inspection.save()
+        app.logger.info('Dataset %s has been assigned for inspection to user %s.', dataset_selected, username)
         return redirect("/admin_panel")
 
     return render_template(
@@ -1011,6 +1032,7 @@ def receive_report():
     ind_name = np.where(np.array(shuffled_names[0]) == str(report.subject) + ".html")
     index_rated[0][ind_name] = True
     current_inspection.update_one(set__index_rated_reports=index_rated[0].tolist())
+    app.logger.info('Report %s has been rated by user %s.', report.subject, username)
     return redirect("/index-" + username + "/" + dataset, code=307)
 
 
