@@ -24,6 +24,7 @@ import os
 import random
 
 import numpy as np
+import os.path as op
 from bs4 import BeautifulSoup
 from flask import (
     Flask,
@@ -343,7 +344,7 @@ def patch_javascript_submit_button(
 
     # Loop through each SVG tag
     original_work_dir=os.getcwd()
-    html_file_dir= os.path.dirname(path_html_file)
+    html_file_dir= op.dirname(path_html_file)
     os.chdir(html_file_dir)
     for svg in svg_tags:
         # Open the SVG file and read its contents
@@ -470,7 +471,7 @@ def login():
             login_user(user)
             return redirect("/" + current_user.username)
     return render_template(
-        os.path.relpath("./templates/login.html", template_folder), form=form
+        op.relpath("./templates/login.html", template_folder), form=form
     )
 
 
@@ -500,7 +501,7 @@ def register():
                 return redirect("/login")
 
     return render_template(
-        os.path.relpath("./templates/register.html", template_folder), form=form
+        op.relpath("./templates/register.html", template_folder), form=form
     )
 
 
@@ -528,12 +529,12 @@ def register_new_user():
                 form.password.data = ''
                 flash("Please use a different username.", "error")
                 return render_template(
-                    os.path.relpath("./templates/register_new_user.html", template_folder),
+                    op.relpath("./templates/register_new_user.html", template_folder),
                     form=form,
                 )
 
     return render_template(
-        os.path.relpath("./templates/register_new_user.html", template_folder),
+        op.relpath("./templates/register_new_user.html", template_folder),
         form=form,
     )
 
@@ -561,7 +562,7 @@ def change_psw():
             return redirect("/login")
 
     return render_template(
-        os.path.relpath("./templates/change_psw.html", template_folder),
+        op.relpath("./templates/change_psw.html", template_folder),
         form=form,
         username=username_1,
     )
@@ -591,7 +592,7 @@ def add_admin():
             app.logger.info('User %s is now an admin', user.username)
             return redirect("/admin_panel")
         return render_template(
-            os.path.relpath("./templates/add_admin.html", template_folder),
+            op.relpath("./templates/add_admin.html", template_folder),
             number_users=len(list_users),
             list_users=list_users,
         )
@@ -615,7 +616,7 @@ def remove_admin():
             return redirect("/admin_panel")
 
         return render_template(
-            os.path.relpath("./templates/remove_admin.html", template_folder),
+            op.relpath("./templates/remove_admin.html", template_folder),
             number_users=len(list_admin),
             list_users=list_admin,
         )
@@ -638,7 +639,7 @@ def remove_user():
             app.logger.info('User %s has been deleted', username_selected)
             return redirect("/admin_panel")
         return render_template(
-            os.path.relpath("./templates/remove_user.html", template_folder),
+            op.relpath("./templates/remove_user.html", template_folder),
             number_users=len(list_user),
             list_users=list_user,
         )
@@ -664,7 +665,7 @@ def remove_dataset():
             app.logger.info('Dataset %s has been deleted', name_selected)
             return redirect("/admin_panel")
         return render_template(
-            os.path.relpath("./templates/remove_dataset.html", template_folder),
+            op.relpath("./templates/remove_dataset.html", template_folder),
             number_dataset=len(list_dataset),
             list_dataset=list_dataset,
         )
@@ -691,7 +692,7 @@ def remove_inspection():
             return redirect("/admin_panel")
 
         return render_template(
-            os.path.relpath("./templates/remove_inspection.html", template_folder),
+            op.relpath("./templates/remove_inspection.html", template_folder),
             number_inspection=len(list_inspection_username),
             list_username=list_inspection_username,
             list_dataset=list_inspection_dataset,
@@ -731,8 +732,8 @@ def display_report_anonymized(username, report_name):
             two_folders=True,
         )
         return render_template(
-            os.path.relpath(
-                path_anonymized_data + "/" + report_name_original[12:], template_folder
+            op.relpath(
+                op.join(path_anonymized_data, report_name_original[12:]), template_folder
             )
         )
     else:
@@ -744,8 +745,8 @@ def display_report_anonymized(username, report_name):
             anonymized=True,
         )
         return render_template(
-            os.path.relpath(
-                path_anonymized_data + "/" + report_name_original, template_folder
+            op.relpath(
+                op.join(path_anonymized_data, report_name_original), template_folder
             )
         )
 
@@ -760,12 +761,12 @@ def display_report_non_anonymized(username, report_name):
     dataset = user.current_dataset
     dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
 
-    path_templates_mriqc = dataset_path + "sub-" + report_name
+    path_templates_mriqc = op.join(dataset_path, "sub-" + report_name)
     path_modified_template = patch_javascript_submit_button(
         path_templates_mriqc, username, dataset, "sub-" + report_name, anonymized=False
     )
     return render_template(
-        os.path.relpath(path_modified_template + "/sub-" + report_name, template_folder)
+        op.relpath(op.join(path_modified_template , "sub-" + report_name), template_folder)
     )
 
 
@@ -780,7 +781,7 @@ def display_report_two_folder_non_anonymized_cond1(report_name):
     dataset = user.current_dataset
     dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
 
-    path_templates_mriqc = dataset_path + "/condition1/" + report_name
+    path_templates_mriqc = op.join(dataset_path, "condition1", report_name)
     path_modified_template = patch_javascript_submit_button(
         path_templates_mriqc,
         username,
@@ -790,7 +791,7 @@ def display_report_two_folder_non_anonymized_cond1(report_name):
         two_folders=True,
     )
     return render_template(
-        os.path.relpath(path_modified_template + "/" + report_name, template_folder)
+        op.relpath(op.join(path_modified_template, report_name), template_folder)
     )
 
 
@@ -805,17 +806,17 @@ def display_report_two_folder_non_anonymized_cond2(report_name):
     dataset = user.current_dataset
     dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
 
-    path_templates_mriqc = dataset_path + "/condition2/" + report_name
+    path_templates_mriqc = op.join(dataset_path, "condition2", report_name)
     path_modified_template = patch_javascript_submit_button(
         path_templates_mriqc,
         username,
         dataset,
-        "/condition2/" + report_name,
+        op.join("/condition2", report_name),
         anonymized=False,
         two_folders=True,
     )
     return render_template(
-        os.path.relpath(path_modified_template + "/" + report_name, template_folder)
+        op.relpath(op.join(path_modified_template, report_name), template_folder)
     )
 
 
@@ -845,7 +846,7 @@ def info_user(username):
         pass
     if current_user.is_admin:
         return render_template(
-            os.path.relpath(
+            op.relpath(
                 "./templates/user_panel_admin_version.html", template_folder
             ),
             list_inspections_assigned=list_inspections_assigned,
@@ -855,7 +856,7 @@ def info_user(username):
         )
     else:
         return render_template(
-            os.path.relpath("./templates/user_panel.html", template_folder),
+            op.relpath("./templates/user_panel.html", template_folder),
             list_inspections_assigned=list_inspections_assigned,
             number_inspections=len(list_inspections_assigned),
             username=username,
@@ -882,7 +883,7 @@ def display_index_inspection(username, dataset):
     ).tolist()
     names_files = current_inspection.values_list("names_anonymized")[0]
     return render_template(
-        os.path.relpath(path_index, template_folder),
+        op.relpath(path_index, template_folder),
         array_rated=array_rated,
         index_list=names_files,
         url_index="/index-" + str(username) + "/" + str(dataset),
@@ -901,21 +902,15 @@ def admin_panel():
         list_users = User.objects.all().values_list("username")
         list_datasets = Dataset.objects.all().values_list("name")
         list_admin = User.objects(Q(is_admin=True)).values_list("username")
-        list_inspection_username = Inspection.objects.all().values_list("username")
-        list_inspection_dataset = Inspection.objects.all().values_list("dataset")
+        list_inspection = [f"{inspection.dataset} -> {inspection.username}" for inspection in Inspection.objects.all()]
         if request.method == "POST":
             pass
         return render_template(
-            os.path.relpath("./templates/admin_panel.html", template_folder),
-            number_users=len(list_users),
+            op.relpath("./templates/admin_panel.html", template_folder),
             list_users=list_users,
             list_admin=list_admin,
-            number_admin=len(list_admin),
-            number_datasets=len(list_datasets),
             list_datasets=list_datasets,
-            list_inspection_username=list_inspection_username,
-            list_inspection_dataset=list_inspection_dataset,
-            number_inspection=len(list_inspection_username),
+            list_inspection=list_inspection,
         )
     else:
         return redirect("/login")
@@ -930,7 +925,7 @@ def create_dataset():
         selected_datasets = request.form.getlist("datasets[]")
         for d in selected_datasets:
             dataset_name = d
-            dataset_path = "/datasets/" + d
+            dataset_path = op.join("/datasets", d)
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
 
             existing_dataset = Dataset.objects(name=dataset_name).first()
@@ -949,10 +944,10 @@ def create_dataset():
         return redirect("/admin_panel")
 
     #Extract the list of folders under the directory /datasets
-    datasets = [folder for folder in os.listdir("/datasets") if os.path.isdir(os.path.join("/datasets", folder))]
+    datasets = [folder for folder in os.listdir("/datasets") if op.isdir(op.join("/datasets", folder))]
     app.logger.debug('List of folders under /datasets: %s', datasets)
     return render_template(
-        os.path.relpath("./templates/create_dataset.html", template_folder), datasets = datasets
+        op.relpath("./templates/create_dataset.html", template_folder), datasets = datasets
     )
 
 
@@ -1012,10 +1007,8 @@ def assign_dataset():
         return redirect("/admin_panel")
 
     return render_template(
-        os.path.relpath("./templates/assign_dataset.html", template_folder),
-        number_users=len(list_users),
+        op.relpath("./templates/assign_dataset.html", template_folder),
         list_users=list_users,
-        number_datasets=len(list_datasets),
         list_datasets=list_datasets,
     )
 
