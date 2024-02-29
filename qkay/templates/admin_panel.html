@@ -43,7 +43,7 @@
 			{%for i in range(0, number_admin)%}
 
 
-			    <a href="#" class="list-group-item">{{list_admin[i]}} </a>
+			    <div class="list-group-item">{{list_admin[i]}} </div>
 
 			{%endfor%}
 
@@ -68,7 +68,7 @@
 			{%for i in range(0, number_users)%}
 
 
-			    <a href="#" class="list-group-item">{{list_users[i]}} </a>
+			    <div class="list-group-item">{{list_users[i]}} </div>
 
 			{%endfor%}
 
@@ -101,7 +101,7 @@
 			{%for i in range(0, number_datasets)%}
 
 
-			    <a href="#" class="list-group-item">{{list_datasets[i]}} </a>
+			    <div class="list-group-item">{{list_datasets[i]}} </div>
 
 
 
@@ -121,8 +121,7 @@
 
 			{%for i in range(0, number_inspection)%}
 
-
-			    <a href="#" class="list-group-item">{{list_inspection_dataset[i]}} -> {{list_inspection_username[i]}}</a>
+			    <div class="list-group-item">{{ list_inspection_dataset[i] }}</div>
 
 			{%endfor%}
 

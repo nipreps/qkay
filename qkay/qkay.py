@@ -255,14 +255,15 @@ class RegistrationForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     password2 = PasswordField(
-        "Repeat Password", validators=[DataRequired(), EqualTo("password")]
+        "Repeat Password", validators=[DataRequired(), EqualTo("password", message="Passwords do not match")]
     )
     submit = SubmitField("Register")
 
     def validate_username(self, username):
         user = User.objects(username=username.data).first()
         if user is not None:
-            flash("Please use a different username.")
+            app.logger.error('User %s already exists', user.username)
+            flash("Username already exists.", "error")
 
 
 class ChangepswForm(FlaskForm):
@@ -475,7 +476,7 @@ def register():
                 flash("Congratulations, you are now a registered user!")
                 return redirect("/login")
             else:
-                flash("Username already existing, please login")
+                flash("Please login.", "error")
                 return redirect("/login")
 
     return render_template(
@@ -486,7 +487,7 @@ def register():
 @app.route("/register_new_user", methods=["POST", "GET"])
 def register_new_user():
     """
-    route the app to the register form page
+    route the app to the page to register a new user
     """
 
     form = RegistrationForm()
@@ -500,15 +501,16 @@ def register_new_user():
                     password=generate_password_hash(form.password.data),
                 )
                 user.save()
-                if not os.path.exists(
-                    "/templates/templates_user_" + form.username.data
-                ):
-                    os.makedirs("./templates/templates_user_" + form.username.data)
-                flash("Congratulations, you are now a registered user!")
                 return redirect("/admin_panel")
             else:
-                flash("Username already existing, please login")
-                return redirect("/admin_panel")
+                # Clear the form to remove the entered username and password
+                form.username.data = ''
+                form.password.data = ''
+                flash("Please use a different username.", "error")
+                return render_template(
+                    os.path.relpath("./templates/register_new_user.html", template_folder),
+                    form=form,
+                )
 
     return render_template(
         os.path.relpath("./templates/register_new_user.html", template_folder),
@@ -519,7 +521,7 @@ def register_new_user():
 @app.route("/change_pwd", methods=["POST", "GET"])
 def change_psw():
     """
-    route the app to the register form page
+    route the app to the page to change password
     """
 
     form = ChangepswForm()
