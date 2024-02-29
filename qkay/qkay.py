@@ -163,7 +163,13 @@ class Dataset(db.Document):
         """
         Validate if the dataset directory exists and contains HTML files.
         """
-        return os.path.exists(self.path_dataset) and any(file.endswith('.html') for file in os.listdir(self.path_dataset))
+        #Check whether the folder contains at least one HTML file
+        for _, _, files in os.walk(self.path_dataset):
+            for file in files:
+                if file.endswith('.html'):
+                    return True
+
+        return op.exists(self.path_dataset) and any(file.endswith('.html') for _, _, file in os.walk(self.path_dataset))
 
 
 class Inspection(db.Document):
@@ -959,8 +965,10 @@ def assign_dataset():
     list_users = User.objects.all().values_list("username")
     list_datasets = Dataset.objects.all().values_list("name")
     if request.method == "POST":
-        dataset_selected = list_datasets[int(request.form.get("datasets dropdown"))]
-        username = list_users[int(request.form.get("users dropdown"))]
+        dataset_selected = request.form.get("datasets dropdown")
+        app.logger.debug('Dataset %s selected for inspection', dataset_selected)
+        username = request.form.get("users dropdown")
+        app.logger.debug('User %s selected for inspection', username)
         randomize = request.form.get("option_randomize")
         rate_all = request.form.get("option_rate_all")
         blind = request.form.get("option_blind")
@@ -971,6 +979,7 @@ def assign_dataset():
         )
 
         names_files = list_individual_reports(dataset_path, two_folders=two_datasets)
+        app.logger.debug('%s reports found in dataset %s', len(names_files), dataset_selected)
         new_names = names_files
         if rate_all:
             names_repeated = repeat_reports(new_names, 40, two_folders=two_datasets)
