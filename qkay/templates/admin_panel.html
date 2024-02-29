@@ -40,10 +40,9 @@
 		<div class="filter-content">
 			<div class="list-group list-group-flush">
 
-			{%for i in range(0, number_admin)%}
+			{% for admin in list_admin %}
 
-
-			    <div class="list-group-item">{{list_admin[i]}} </div>
+			    <div class="list-group-item">{{admin}} </div>
 
 			{%endfor%}
 
@@ -65,11 +64,8 @@
 		<div class="filter-content">
 			<div class="list-group list-group-flush">
 
-			{%for i in range(0, number_users)%}
-
-
-			    <div class="list-group-item">{{list_users[i]}} </div>
-
+			{%for user in list_users%}
+			    <div class="list-group-item">{{user}} </div>
 			{%endfor%}
 
 
@@ -98,10 +94,10 @@
 		<div class="filter-content">
 			<div class="list-group list-group-flush">
 
-			{%for i in range(0, number_datasets)%}
+			{%for dataset in list_datasets%}
 
 
-			    <div class="list-group-item">{{list_datasets[i]}} </div>
+			    <div class="list-group-item">{{dataset}} </div>
 
 
 
@@ -115,13 +111,13 @@
 			</div>
 	</article> <!-- card-group-item.// -->
 	<article class="card-group-item">
-		<header class="card-header"><h6 class="title">Options</h6></header>
+		<header class="card-header"><h6 class="title">Assignments</h6></header>
 		<div class="filter-content">
 		<div class="list-group list-group-flush">
 
-			{%for i in range(0, number_inspection)%}
+			{%for inspection in list_inspection%}
 
-			    <div class="list-group-item">{{ list_inspection_dataset[i] }}</div>
+			    <div class="list-group-item">{{ inspection }}</div>
 
 			{%endfor%}
 
@@ -130,7 +126,7 @@
 			<div class="filter-content">
 			<div align=right>
 
-				<button type="button" id="remove_inspection" class="btn btn-danger">Remove assignement</button>
+				<button type="button" id="remove_inspection" class="btn btn-danger">Remove assignment</button>
 
 			</div>
 
