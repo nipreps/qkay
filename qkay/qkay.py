@@ -67,7 +67,7 @@ dictConfig({
         'formatter': 'default'
     }},
     'root': {
-        'level': 'INFO',
+        'level': 'DEBUG',
         'handlers': ['wsgi']
     }
 })
@@ -157,6 +157,12 @@ class Dataset(db.Document):
     meta = {"collection": "datasets"}
     name = db.StringField()
     path_dataset = db.StringField()
+
+    def validate_dataset(self):
+        """
+        Validate if the dataset directory exists and contains HTML files.
+        """
+        return os.path.exists(self.path_dataset) and any(file.endswith('.html') for file in os.listdir(self.path_dataset))
 
 
 class Inspection(db.Document):
@@ -921,30 +927,32 @@ def create_dataset():
     Create a Dataset object with the parameters given in the form
     """
     if request.method == "POST":
-        dataset_name = request.form["name"]
-        dataset_path = request.form["path"]
-        try:
+        selected_datasets = request.form.getlist("datasets[]")
+        for d in selected_datasets:
+            dataset_name = d
+            dataset_path = "/datasets/" + d
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
-            dataset.save()
-            app.logger.info('New dataset named %s created from %s.', dataset_name, dataset_path)
-            return redirect("/admin_panel")
-        except:
-            app.logger.error('Error creating dataset named %s from %s.', dataset_name, dataset_path)
-            return redirect("/empty_dataset")
 
+            existing_dataset = Dataset.objects(name=dataset_name).first()
+            if not dataset.validate_dataset():
+                app.logger.error('The directory %s does not exist or does not contain any HTML files.', dataset_path)
+                flash("The directory %s does not exist or does not contain any HTML files. Please select another dataset." %dataset_path, "error")
+                return redirect("/create_dataset")
+            elif existing_dataset:
+                app.logger.error('The dataset %s already exists.', dataset_name)
+                flash("The dataset %s already exists. Please select another dataset." %dataset_name, "error")
+                return redirect("/create_dataset")  
+            else:
+                dataset.save()
+                app.logger.info('New dataset named %s created from %s.', dataset_name, dataset_path)
+                
+        return redirect("/admin_panel")
+
+    #Extract the list of folders under the directory /datasets
+    datasets = [folder for folder in os.listdir("/datasets") if os.path.isdir(os.path.join("/datasets", folder))]
+    app.logger.debug('List of folders under /datasets: %s', datasets)
     return render_template(
-        os.path.relpath("./templates/create_dataset.html", template_folder)
-    )
-
-
-@app.route("/empty_dataset", methods=["POST", "GET"])
-@login_required
-def empty_dataset():
-    """
-    display an error message when the dataset is empty
-    """
-    return render_template(
-        os.path.relpath("./templates/error_empty_dataset.html", template_folder)
+        os.path.relpath("./templates/create_dataset.html", template_folder), datasets = datasets
     )
 
 
