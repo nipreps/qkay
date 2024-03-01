@@ -310,16 +310,13 @@ class ChangepswForm(FlaskForm):
     submit = SubmitField("Change password")
 
 
-def patch_javascript_submit_button(
+def modify_mriqc_report(
     path_html_file,
-    username,
-    dataset_name,
-    report_name_original,
-    anonymized=False,
-    two_folders=False,
 ):
     """
-    Modifies MRIQC widgets of a report and store the modified report in path_data
+    Modify the MRIQC report and its rating widget.
+    Deletes the IQMs section.
+    Replace in the rating widget the download button by a submit button that is disabled for a set amount of time to enforce minimum rating time.
 
     Parameters
     ---------
@@ -341,14 +338,10 @@ def patch_javascript_submit_button(
     """
     with open(path_html_file, "r") as file:
         html_file = file.read()
-    html_file=html_file.replace("unspecified",report_name_original[0:-5])
     soup = BeautifulSoup(html_file, "html.parser")
 
-
-    # Find all img tags with SVG source
+    #Embed the SVG images in the HTML files otherwise they are not displayed
     svg_tags = soup.find_all('img', {'src': lambda src: src.endswith('.svg')})
-
-    # Loop through each SVG tag
     original_work_dir=os.getcwd()
     html_file_dir= op.dirname(path_html_file)
     os.chdir(html_file_dir)
@@ -363,19 +356,12 @@ def patch_javascript_submit_button(
         # Replace the SVG source with the base64-encoded data
         svg['src'] = 'data:image/svg+xml;base64,' + base64_data
     os.chdir(original_work_dir)
-    if anonymized:
-        summary_para = soup.find(id="summary")
-        if summary_para:
-            parent_para = summary_para.parent
-            parent_para.li.extract()
-            parent_para.li.extract()
 
-            iqm_para = soup.find(id="iqms-table")
-            iqm_para.decompose()
-        about_para= soup.find(id="About")
-        if about_para:
-            about_para.decompose()
+    #Remove Reproducibility and provenance information section to remove access to the IQMs
+    iqms_section = soup.find('h2', id='about-metadata-2')
+    iqms_section.decompose()
 
+    #Replace the download button by a submit button
     button_container = soup.find(id="btn-download").parent
     new_button_tag = soup.new_tag("button")
     new_button_tag["class"] = "btn btn-primary"
@@ -389,52 +375,17 @@ def patch_javascript_submit_button(
         button_post.decompose()
     soup.find(id="btn-download").decompose()
 
+    #Define the behavior of clicking on the submit button
+    #Notably, disable submit button for a set amount of time
+    #It enforces the raters to spend at least that time to assign a quality rating
     script_tag = soup.body.script
-    if "MINIMUM_RATING_TIME" in script_tag.string:
-
-        with open("./scripts_js/script_button_rating_widget_template_new.txt", "r") as file:
-            js_patch = file.read()
-        js_patch = js_patch.replace("IP_ADDRESS", "localhost")
-
-        #js_patch=script_tag.string
-    else:
-        with open("./scripts_js/script_button_rating_widget_template.txt", "r") as file:
-            js_patch = file.read()
-        js_patch = js_patch.replace("IP_ADDRESS", "localhost")
-    if two_folders:
-        js_patch_head = soup.head.findAll("script")[2]
-
-        js_patch_head.string = js_patch_head.string.replace(
-            'var sub = "sub-', 'var sub = "' + report_name_original[0:12] + "sub-"
-        )
-
+    with open("./scripts_js/script_button_rating_widget_template_minimum_time.txt", "r") as file:
+        js_patch = file.read()
+    js_patch = js_patch.replace("IP_ADDRESS", "localhost")
     script_tag.string = js_patch
 
-    if anonymized:
-        path_data = (
-            "./templates/templates_user_"
-            + username
-            + "/"
-            + dataset_name
-            + "_anonymized"
-        )
-    else:
-        path_data = (
-            "./templates/templates_user_"
-            + username
-            + "/"
-            + dataset_name
-            + "_non-anonymized"
-        )
-    if not os.path.exists(path_data):
-        os.makedirs(path_data)
-    if two_folders:
-        with open(path_data + "/" + report_name_original[12:], "w") as file:
-            file.write(str(soup))
-    else:
-        with open(path_data + "/" + report_name_original, "w") as file:
-            file.write(str(soup))
-    return path_data
+    modified_mriqc_report = str(soup)
+    return modified_mriqc_report
 
 
 @login_manager.user_loader
@@ -707,56 +658,6 @@ def remove_inspection():
         return redirect("/login")
 
 
-@app.route("/index-<username>/A-<report_name>")
-@login_required
-def display_report_anonymized(username, report_name):
-    """
-    display anonymized report A-<report_name>
-    """
-    dataset_name = report_name.split("_")[0]
-    current_inspection = Inspection.objects(
-        Q(dataset=dataset_name) & Q(username=username)
-    )
-    original_names = current_inspection.values_list("names_shuffled")
-    anonymized_names = current_inspection.values_list("names_anonymized")
-
-
-
-    ind_name = np.where(np.array(anonymized_names[0]) == "A-" + report_name)
-    report_name_original = np.array(original_names[0])[ind_name][0]
-    dataset_path = str(
-        Dataset.objects(name=dataset_name).values_list("path_dataset")[0]
-    )
-    path_templates_mriqc = dataset_path + report_name_original
-    if report_name_original.startswith("/condition"):
-        path_anonymized_data = patch_javascript_submit_button(
-            path_templates_mriqc,
-            username,
-            dataset_name,
-            report_name_original,
-            anonymized=True,
-            two_folders=True,
-        )
-        return render_template(
-            op.relpath(
-                op.join(path_anonymized_data, report_name_original[12:]), template_folder
-            )
-        )
-    else:
-        path_anonymized_data = patch_javascript_submit_button(
-            path_templates_mriqc,
-            username,
-            dataset_name,
-            report_name_original,
-            anonymized=True,
-        )
-        return render_template(
-            op.relpath(
-                op.join(path_anonymized_data, report_name_original), template_folder
-            )
-        )
-
-
 @app.route("/index-<username>/sub-<report_name>")
 @login_required
 def display_report_non_anonymized(username, report_name):
@@ -768,63 +669,10 @@ def display_report_non_anonymized(username, report_name):
     dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
 
     path_templates_mriqc = op.join(dataset_path, "sub-" + report_name)
-    path_modified_template = patch_javascript_submit_button(
-        path_templates_mriqc, username, dataset, "sub-" + report_name, anonymized=False
-    )
+    mriqc_report = modify_mriqc_report(path_templates_mriqc)
     return render_template(
-        op.relpath(op.join(path_modified_template , "sub-" + report_name), template_folder)
+        op.relpath('./templates/report.html', template_folder), html_content = mriqc_report
     )
-
-
-@app.route("/condition1/<report_name>")
-@login_required
-def display_report_two_folder_non_anonymized_cond1(report_name):
-    """
-    display report sub-<subject_number>
-    """
-    username = current_user.username
-    user = User.objects(username=username).first()
-    dataset = user.current_dataset
-    dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
-
-    path_templates_mriqc = op.join(dataset_path, "condition1", report_name)
-    path_modified_template = patch_javascript_submit_button(
-        path_templates_mriqc,
-        username,
-        dataset,
-        "/condition1/" + report_name,
-        anonymized=False,
-        two_folders=True,
-    )
-    return render_template(
-        op.relpath(op.join(path_modified_template, report_name), template_folder)
-    )
-
-
-@app.route("/condition2/<report_name>")
-@login_required
-def display_report_two_folder_non_anonymized_cond2(report_name):
-    """
-    display report sub-<subject_number>
-    """
-    username = current_user.username
-    user = User.objects(username=username).first()
-    dataset = user.current_dataset
-    dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
-
-    path_templates_mriqc = op.join(dataset_path, "condition2", report_name)
-    path_modified_template = patch_javascript_submit_button(
-        path_templates_mriqc,
-        username,
-        dataset,
-        op.join("/condition2", report_name),
-        anonymized=False,
-        two_folders=True,
-    )
-    return render_template(
-        op.relpath(op.join(path_modified_template, report_name), template_folder)
-    )
-
 
 @app.route("/")
 @login_required
