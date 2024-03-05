@@ -57,21 +57,24 @@ from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, EqualTo
 
 
-dictConfig({
-    'version': 1,
-    'formatters': {'default': {
-        'format': '[%(asctime)s] %(levelname)s in %(module)s: %(message)s',
-    }},
-    'handlers': {'wsgi': {
-        'class': 'logging.StreamHandler',
-        'stream': 'ext://flask.logging.wsgi_errors_stream',
-        'formatter': 'default'
-    }},
-    'root': {
-        'level': 'DEBUG',
-        'handlers': ['wsgi']
+dictConfig(
+    {
+        "version": 1,
+        "formatters": {
+            "default": {
+                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+            }
+        },
+        "handlers": {
+            "wsgi": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://flask.logging.wsgi_errors_stream",
+                "formatter": "default",
+            }
+        },
+        "root": {"level": "DEBUG", "handlers": ["wsgi"]},
     }
-})
+)
 
 template_folder = "../"
 
@@ -163,13 +166,15 @@ class Dataset(db.Document):
         """
         Validate if the dataset directory exists and contains HTML files.
         """
-        #Check whether the folder contains at least one HTML file
+        # Check whether the folder contains at least one HTML file
         for _, _, files in os.walk(self.path_dataset):
             for file in files:
-                if file.endswith('.html'):
+                if file.endswith(".html"):
                     return True
 
-        return op.exists(self.path_dataset) and any(file.endswith('.html') for _, _, file in os.walk(self.path_dataset))
+        return op.exists(self.path_dataset) and any(
+            file.endswith(".html") for _, _, file in os.walk(self.path_dataset)
+        )
 
 
 class Inspection(db.Document):
@@ -286,14 +291,18 @@ class RegistrationForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     password2 = PasswordField(
-        "Repeat Password", validators=[DataRequired(), EqualTo("password", message="Passwords do not match")]
+        "Repeat Password",
+        validators=[
+            DataRequired(),
+            EqualTo("password", message="Passwords do not match"),
+        ],
     )
     submit = SubmitField("Register")
 
     def validate_username(self, username):
         user = User.objects(username=username.data).first()
         if user is not None:
-            app.logger.error('User %s already exists', user.username)
+            app.logger.error("User %s already exists", user.username)
             flash("Username already exists.", "error")
 
 
@@ -341,33 +350,38 @@ def modify_mriqc_report(
     soup = BeautifulSoup(html_file, "html.parser")
 
     # if subject is unspecified, replace it by the report name
-    script_tag = soup.find('script', string=lambda text: text and 'var sub = "unspecified";' in text)
+    script_tag = soup.find(
+        "script", string=lambda text: text and 'var sub = "unspecified";' in text
+    )
     if script_tag:
         report_name = op.basename(path_html_file)
-        script_tag.string = script_tag.string.replace('var sub = "unspecified";', f'var sub = "{report_name.replace(".html", "")}";')
+        script_tag.string = script_tag.string.replace(
+            'var sub = "unspecified";',
+            f'var sub = "{report_name.replace(".html", "")}";',
+        )
 
-    #Embed the SVG images in the HTML files otherwise they are not displayed
-    svg_tags = soup.find_all('img', {'src': lambda src: src.endswith('.svg')})
-    original_work_dir=os.getcwd()
-    html_file_dir= op.dirname(path_html_file)
+    # Embed the SVG images in the HTML files otherwise they are not displayed
+    svg_tags = soup.find_all("img", {"src": lambda src: src.endswith(".svg")})
+    original_work_dir = os.getcwd()
+    html_file_dir = op.dirname(path_html_file)
     os.chdir(html_file_dir)
     for svg in svg_tags:
         # Open the SVG file and read its contents
-        with open(svg['src'], 'rb') as file:
+        with open(svg["src"], "rb") as file:
             svg_data = file.read()
 
         # Convert the SVG data to base64 encoding
-        base64_data = base64.b64encode(svg_data).decode('utf-8')
+        base64_data = base64.b64encode(svg_data).decode("utf-8")
 
         # Replace the SVG source with the base64-encoded data
-        svg['src'] = 'data:image/svg+xml;base64,' + base64_data
+        svg["src"] = "data:image/svg+xml;base64," + base64_data
     os.chdir(original_work_dir)
 
-    #Remove Reproducibility and provenance information section to remove access to the IQMs
-    iqms_section = soup.find('h2', id='about-metadata-2')
+    # Remove Reproducibility and provenance information section to remove access to the IQMs
+    iqms_section = soup.find("h2", id="about-metadata-2")
     iqms_section.decompose()
 
-    #Replace the download button by a submit button
+    # Replace the download button by a submit button
     button_container = soup.find(id="btn-download").parent
     new_button_tag = soup.new_tag("button")
     new_button_tag["class"] = "btn btn-primary"
@@ -376,16 +390,18 @@ def modify_mriqc_report(
     new_button_tag["disabled"] = ""
     new_button_tag.string = "Submit"
     button_container.append(new_button_tag)
-    button_post=soup.find(id="btn-post")
+    button_post = soup.find(id="btn-post")
     if button_post:
         button_post.decompose()
     soup.find(id="btn-download").decompose()
 
-    #Define the behavior of clicking on the submit button
-    #Notably, disable submit button for a set amount of time
-    #It enforces the raters to spend at least that time to assign a quality rating
+    # Define the behavior of clicking on the submit button
+    # Notably, disable submit button for a set amount of time
+    # It enforces the raters to spend at least that time to assign a quality rating
     script_tag = soup.body.script
-    with open("./scripts_js/script_button_rating_widget_template_minimum_time.txt", "r") as file:
+    with open(
+        "./scripts_js/script_button_rating_widget_template_minimum_time.txt", "r"
+    ) as file:
         js_patch = file.read()
     js_patch = js_patch.replace("IP_ADDRESS", "localhost")
     script_tag.string = js_patch
@@ -457,7 +473,7 @@ def register():
                     password=generate_password_hash(form.password.data),
                 )
                 user.save()
-                app.logger.info('User %s registered', user.username)
+                app.logger.info("User %s registered", user.username)
                 return redirect("/login")
             else:
                 flash("Please login.", "error")
@@ -488,8 +504,8 @@ def register_new_user():
                 return redirect("/admin_panel")
             else:
                 # Clear the form to remove the entered username and password
-                form.username.data = ''
-                form.password.data = ''
+                form.username.data = ""
+                form.password.data = ""
                 flash("Please use a different username.", "error")
                 return render_template(
                     op.relpath("./templates/register_new_user.html", template_folder),
@@ -518,7 +534,7 @@ def change_psw():
                     user.update_one(
                         set__password=generate_password_hash(form.password.data)
                     )
-                    app.logger.info('Password changed')
+                    app.logger.info("Password changed")
                     return redirect("/login")
 
         else:
@@ -552,7 +568,7 @@ def add_admin():
             username_selected = list_users[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=True)
-            app.logger.info('User %s is now an admin', user.username)
+            app.logger.info("User %s is now an admin", user.username)
             return redirect("/admin_panel")
         return render_template(
             op.relpath("./templates/add_admin.html", template_folder),
@@ -575,7 +591,7 @@ def remove_admin():
             username_selected = list_admin[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=False)
-            app.logger.info('User %s is no longer an admin', user.username)
+            app.logger.info("User %s is no longer an admin", user.username)
             return redirect("/admin_panel")
 
         return render_template(
@@ -599,7 +615,7 @@ def remove_user():
             username_selected = list_user[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.delete()
-            app.logger.info('User %s has been deleted', username_selected)
+            app.logger.info("User %s has been deleted", username_selected)
             return redirect("/admin_panel")
         return render_template(
             op.relpath("./templates/remove_user.html", template_folder),
@@ -625,7 +641,7 @@ def remove_dataset():
             inspections = Inspection.objects(Q(dataset=name_selected))
             for inspection in inspections:
                 inspection.delete()
-            app.logger.info('Dataset %s has been deleted', name_selected)
+            app.logger.info("Dataset %s has been deleted", name_selected)
             return redirect("/admin_panel")
         return render_template(
             op.relpath("./templates/remove_dataset.html", template_folder),
@@ -643,7 +659,6 @@ def remove_inspection():
     route the app to the remove inspection page
     """
     if current_user.is_admin:
-
         list_inspection_username = Inspection.objects.all().values_list("username")
         list_inspection_dataset = Inspection.objects.all().values_list("dataset")
         list_inspection_id = Inspection.objects.all().values_list("id")
@@ -651,7 +666,7 @@ def remove_inspection():
             id_selected = list_inspection_id[int(request.form.get("users dropdown"))]
             inspection = Inspection.objects(Q(id=id_selected))
             inspection.delete()
-            app.logger.info('Inspection %s has been deleted', id_selected)
+            app.logger.info("Inspection %s has been deleted", id_selected)
             return redirect("/admin_panel")
 
         return render_template(
@@ -677,8 +692,10 @@ def display_report_non_anonymized(username, report_name):
     path_templates_mriqc = op.join(dataset_path, "sub-" + report_name)
     mriqc_report = modify_mriqc_report(path_templates_mriqc)
     return render_template(
-        op.relpath('./templates/report.html', template_folder), html_content = mriqc_report
+        op.relpath("./templates/report.html", template_folder),
+        html_content=mriqc_report,
     )
+
 
 @app.route("/")
 @login_required
@@ -706,9 +723,7 @@ def info_user(username):
         pass
     if current_user.is_admin:
         return render_template(
-            op.relpath(
-                "./templates/user_panel_admin_version.html", template_folder
-            ),
+            op.relpath("./templates/user_panel_admin_version.html", template_folder),
             list_inspections_assigned=list_inspections_assigned,
             number_inspections=len(list_inspections_assigned),
             username=username,
@@ -764,7 +779,10 @@ def admin_panel():
         list_users = User.objects.all().values_list("username")
         list_datasets = Dataset.objects.all().values_list("name")
         list_admin = User.objects(Q(is_admin=True)).values_list("username")
-        list_inspection = [f"{inspection.dataset} -> {inspection.username}" for inspection in Inspection.objects.all()]
+        list_inspection = [
+            f"{inspection.dataset} -> {inspection.username}"
+            for inspection in Inspection.objects.all()
+        ]
         if request.method == "POST":
             pass
         return render_template(
@@ -786,30 +804,63 @@ def create_dataset():
     if request.method == "POST":
         selected_datasets = request.form.getlist("datasets[]")
         for d in selected_datasets:
-            dataset_name = d
             dataset_path = op.join("/datasets", d)
-            dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
 
+            # Get dataset name from the data_description.json file if it exists
+            # otherwise, use the folder name
+            desc_file = ""
+            for root, _, files in os.walk(dataset_path):
+                if "dataset_description.json" in files:
+                    desc_file = op.join(root, "dataset_description.json")
+            if desc_file:
+                with open(desc_file, "r") as file:
+                    data_description = json.load(file)
+                    dataset_name = data_description["Name"]
+                # If the name of the dataset is the default MRIQC value, use the folder name instead
+                if dataset_name == "MRIQC - MRI Quality Control":
+                    dataset_name = d
+            else:
+                dataset_name = d
+
+            dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
             existing_dataset = Dataset.objects(name=dataset_name).first()
             if not dataset.validate_dataset():
-                app.logger.error('The directory %s does not exist or does not contain any HTML files.', dataset_path)
-                flash("The directory %s does not exist or does not contain any HTML files. Please select another dataset." %dataset_path, "error")
+                app.logger.error(
+                    "The directory %s does not exist or does not contain any HTML files.",
+                    dataset_path,
+                )
+                flash(
+                    "The directory %s does not exist or does not contain any HTML files. Please select another dataset."
+                    % dataset_path,
+                    "error",
+                )
                 return redirect("/create_dataset")
             elif existing_dataset:
-                app.logger.error('The dataset %s already exists.', dataset_name)
-                flash("The dataset %s already exists. Please select another dataset." %dataset_name, "error")
-                return redirect("/create_dataset")  
+                app.logger.error("The dataset %s already exists.", dataset_name)
+                flash(
+                    "The dataset %s already exists. Please select another dataset."
+                    % dataset_name,
+                    "error",
+                )
+                return redirect("/create_dataset")
             else:
                 dataset.save()
-                app.logger.info('New dataset named %s created from %s.', dataset_name, dataset_path)
-                
+                app.logger.info(
+                    "New dataset named %s created from %s.", dataset_name, dataset_path
+                )
+
         return redirect("/admin_panel")
 
-    #Extract the list of folders under the directory /datasets
-    datasets = [folder for folder in os.listdir("/datasets") if op.isdir(op.join("/datasets", folder))]
-    app.logger.debug('List of folders under /datasets: %s', datasets)
+    # Extract the list of folders under the directory /datasets
+    datasets = [
+        folder
+        for folder in os.listdir("/datasets")
+        if op.isdir(op.join("/datasets", folder))
+    ]
+    app.logger.debug("List of folders under /datasets: %s", datasets)
     return render_template(
-        op.relpath("./templates/create_dataset.html", template_folder), datasets = datasets
+        op.relpath("./templates/create_dataset.html", template_folder),
+        datasets=datasets,
     )
 
 
@@ -822,9 +873,9 @@ def assign_dataset():
     list_datasets = Dataset.objects.all().values_list("name")
     if request.method == "POST":
         dataset_selected = request.form.get("datasets dropdown")
-        app.logger.debug('Dataset %s selected for inspection', dataset_selected)
+        app.logger.debug("Dataset %s selected for inspection", dataset_selected)
         username = request.form.get("users dropdown")
-        app.logger.debug('User %s selected for inspection', username)
+        app.logger.debug("User %s selected for inspection", username)
         randomize = request.form.get("option_randomize")
         rate_all = request.form.get("option_rate_all")
         blind = request.form.get("option_blind")
@@ -835,7 +886,9 @@ def assign_dataset():
         )
 
         names_files = list_individual_reports(dataset_path, two_folders=two_datasets)
-        app.logger.debug('%s reports found in dataset %s', len(names_files), dataset_selected)
+        app.logger.debug(
+            "%s reports found in dataset %s", len(names_files), dataset_selected
+        )
         new_names = names_files
         if rate_all:
             names_repeated = repeat_reports(new_names, 40, two_folders=two_datasets)
@@ -868,7 +921,11 @@ def assign_dataset():
             index_rated_reports=index_rated_reports,
         )
         inspection.save()
-        app.logger.info('Dataset %s has been assigned for inspection to user %s.', dataset_selected, username)
+        app.logger.info(
+            "Dataset %s has been assigned for inspection to user %s.",
+            dataset_selected,
+            username,
+        )
         return redirect("/admin_panel")
 
     return render_template(
@@ -898,7 +955,7 @@ def receive_report():
     ind_name = np.where(np.array(shuffled_names[0]) == str(report.subject) + ".html")
     index_rated[0][ind_name] = True
     current_inspection.update_one(set__index_rated_reports=index_rated[0].tolist())
-    app.logger.info('Report %s has been rated by user %s.', report.subject, username)
+    app.logger.info("Report %s has been rated by user %s.", report.subject, username)
     return redirect("/index-" + username + "/" + dataset, code=307)
 
 
