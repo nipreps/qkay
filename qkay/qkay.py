@@ -340,6 +340,12 @@ def modify_mriqc_report(
         html_file = file.read()
     soup = BeautifulSoup(html_file, "html.parser")
 
+    # if subject is unspecified, replace it by the report name
+    script_tag = soup.find('script', string=lambda text: text and 'var sub = "unspecified";' in text)
+    if script_tag:
+        report_name = op.basename(path_html_file)
+        script_tag.string = script_tag.string.replace('var sub = "unspecified";', f'var sub = "{report_name.replace(".html", "")}";')
+
     #Embed the SVG images in the HTML files otherwise they are not displayed
     svg_tags = soup.find_all('img', {'src': lambda src: src.endswith('.svg')})
     original_work_dir=os.getcwd()
@@ -728,6 +734,8 @@ def display_index_inspection(username, dataset):
     user.current_dataset = dataset
     user.save()
     path_index = "./templates/index.html"
+
+    # Find in the inspection which reports have been rated
     current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username))
     array_rated = (
         np.array(
