@@ -805,6 +805,7 @@ def create_dataset():
         selected_datasets = request.form.getlist("datasets[]")
         for d in selected_datasets:
             dataset_path = op.join("/datasets", d)
+            app.logger.debug("Searching for dataset_description.json in children of %s.", dataset_path) 
 
             # Get dataset name from the data_description.json file if it exists
             # otherwise, use the folder name
@@ -812,14 +813,17 @@ def create_dataset():
             for root, _, files in os.walk(dataset_path):
                 if "dataset_description.json" in files:
                     desc_file = op.join(root, "dataset_description.json")
+                    app.logger.debug("dataset_description.json found at %s.", desc_file) 
             if desc_file:
                 with open(desc_file, "r") as file:
                     data_description = json.load(file)
                     dataset_name = data_description["Name"]
                 # If the name of the dataset is the default MRIQC value, use the folder name instead
                 if dataset_name == "MRIQC - MRI Quality Control":
+                    app.logger.debug("The data name is the default of MRIQC which is not informative, use folder name instead: %s.", d) 
                     dataset_name = d
             else:
+                app.logger.debug("No dataset_description.json found, assign data name to folder name: %s.", d) 
                 dataset_name = d
 
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
