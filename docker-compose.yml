@@ -1,7 +1,6 @@
-version: '2.1'
+version: '2.4'
 services:
   app:
-    #restart: always
     build: .
     restart: always
     ports:
@@ -11,27 +10,21 @@ services:
     volumes:
       - .:/app
       - $DATASETS_PATH:/datasets
-
-
-    #command: python qkay.py
     links:
       - db
     networks:
       - frontend
-      - backend
-
+      - backend   
 
 
   db:
     image: mongo:latest
-    #: mongodb
-    #hostname: mongodb
     command: mongod --bind_ip_all
     restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
-      - db-data:$DB_PATH
+      - $DB_PATH:/data/db
     networks:
       - backend
 
@@ -53,8 +46,3 @@ networks:
     driver: bridge
   backend:
     driver: bridge
-
-volumes:
-  db-data:
-  nginxdata:
-

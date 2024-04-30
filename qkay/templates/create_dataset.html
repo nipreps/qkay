@@ -49,50 +49,44 @@
   </head>
   <body class="bg-light">
     
-<div class="container">
-  <main>
-    <div class="py-5 text-center">
-      <h2>Add dataset</h2>
-    </div>
-
-    <div class="row g-5">
-      
-      </div>
-      <div class="col-md-7 col-lg-8">
-        <h4 class="mb-3">Enter dataset info</h4>
-        <form action="", method="post">
-          
-            <div class="col-sm-6">
-              <label for="name" class="form-label">Name</label>
-              <input type="text" class="form-control" name="name" id="name" placeholder="" value="" required>
-              
-            </div>
-
-            <div class="col-sm-6">
-              <label for="path" class="form-label">Path to dataset</label>
-              <input type="text" class="form-control" name="path" id="path" placeholder="" value="" required>
-              
-          
-
-            
-         
-			<div>&nbsp;</div> 
+    <div class="container">
+      <main>
         
+        <div class="py-5 text-center">
+          <h2>Add dataset</h2>
+        </div>
 
-          <div class="row g-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% if category == 'error' %}
+                        <div class="alert alert-{{ category }}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
 
-          <button class="btn btn-primary" type="submit">Create dataset</button>
-            <a href="/admin_panel " class="btn btn-info" role="button">Cancel</a>
-          </div>
-        </form>
-      </div>
-    </div>
-  </main>
-
-
-</div>
-
-
+        <div class="col-md-7 col-lg-8">
+          <h4 class="mb-3">List of available datasets</h4>
+          <form action="" method="post">
+            {% for dataset in datasets %}
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" name="datasets[]" id="dataset{{ loop.index }}" value="{{ dataset }}">
+              <label class="form-check-label" for="dataset{{ loop.index }}">
+                {{ dataset }}
+              </label>
+            </div>
+            {% endfor %}
+            <div>&nbsp;</div> 
+            <div class="row g-5">
+              <button class="btn btn-primary" type="submit">Create dataset</button>
+                <a href="/admin_panel " class="btn btn-info" role="button">Cancel</a>
+            </div>
+          </form>
+        </div>
+      </main>
     <script src="/docs/5.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
 
       <script src="form-validation.js"></script>

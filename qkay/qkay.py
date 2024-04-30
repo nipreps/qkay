@@ -18,46 +18,64 @@
 #
 #     https://www.nipreps.org/community/licensing/
 #
+import base64
+import glob
+import json
+import os
+import random
+
+import numpy as np
+import os.path as op
+from bs4 import BeautifulSoup
 from flask import (
     Flask,
-    render_template,
-    redirect,
-    url_for,
-    request,
-    jsonify,
     flash,
-    session,
-    g,
+    redirect,
+    render_template,
+    request,
+    url_for,
 )
 from flask_login import (
     LoginManager,
-    login_required,
+    UserMixin,
     current_user,
+    login_required,
     login_user,
     logout_user,
 )
-import json
-import random
-import os
-from flask_login import UserMixin, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mongoengine import MongoEngine
 from flask_wtf import FlaskForm
-from wtforms import StringField, PasswordField, SubmitField
-from wtforms.validators import DataRequired, InputRequired, EqualTo
-import sys
 from index import (
-    list_individual_reports,
-    shuffle_reports,
     anonymize_reports,
+    list_individual_reports,
     repeat_reports,
+    shuffle_reports,
 )
+from logging.config import dictConfig
 from mongoengine.queryset.visitor import Q
-import numpy as np
-from bs4 import BeautifulSoup
-import copy
-import socket
-import base64
+from werkzeug.security import check_password_hash, generate_password_hash
+from wtforms import PasswordField, StringField, SubmitField
+from wtforms.validators import DataRequired, EqualTo
+
+
+dictConfig(
+    {
+        "version": 1,
+        "formatters": {
+            "default": {
+                "format": "[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
+            }
+        },
+        "handlers": {
+            "wsgi": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://flask.logging.wsgi_errors_stream",
+                "formatter": "default",
+            }
+        },
+        "root": {"level": "DEBUG", "handlers": ["wsgi"]},
+    }
+)
 
 template_folder = "../"
 
@@ -70,6 +88,7 @@ app.config["MONGODB_SETTINGS"] = {
     "port": 27017,
     "connect": False,
 }
+app.logger.info(f"MONGODB_SETTINGS: {app.config['MONGODB_SETTINGS']}")
 app.config.update(SECRET_KEY=os.urandom(24))
 db = MongoEngine()
 db.init_app(app)
@@ -143,6 +162,20 @@ class Dataset(db.Document):
     meta = {"collection": "datasets"}
     name = db.StringField()
     path_dataset = db.StringField()
+
+    def validate_dataset(self):
+        """
+        Validate if the dataset directory exists and contains HTML files.
+        """
+        # Check whether the folder contains at least one HTML file
+        for _, _, files in os.walk(self.path_dataset):
+            for file in files:
+                if file.endswith(".html"):
+                    return True
+
+        return op.exists(self.path_dataset) and any(
+            file.endswith(".html") for _, _, file in os.walk(self.path_dataset)
+        )
 
 
 class Inspection(db.Document):
@@ -259,14 +292,19 @@ class RegistrationForm(FlaskForm):
     username = StringField("Username", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     password2 = PasswordField(
-        "Repeat Password", validators=[DataRequired(), EqualTo("password")]
+        "Repeat Password",
+        validators=[
+            DataRequired(),
+            EqualTo("password", message="Passwords do not match"),
+        ],
     )
     submit = SubmitField("Register")
 
     def validate_username(self, username):
         user = User.objects(username=username.data).first()
         if user is not None:
-            flash("Please use a different username.")
+            app.logger.error("User %s already exists", user.username)
+            flash("Username already exists.", "error")
 
 
 class ChangepswForm(FlaskForm):
@@ -282,16 +320,13 @@ class ChangepswForm(FlaskForm):
     submit = SubmitField("Change password")
 
 
-def patch_javascript_submit_button(
+def modify_mriqc_report(
     path_html_file,
-    username,
-    dataset_name,
-    report_name_original,
-    anonymized=False,
-    two_folders=False,
 ):
     """
-    Modifies MRIQC widgets of a report and store the modified report in path_data
+    Modify the MRIQC report and its rating widget.
+    Deletes the IQMs section.
+    Replace in the rating widget the download button by a submit button that is disabled for a set amount of time to enforce minimum rating time.
 
     Parameters
     ---------
@@ -313,41 +348,41 @@ def patch_javascript_submit_button(
     """
     with open(path_html_file, "r") as file:
         html_file = file.read()
-    html_file=html_file.replace("unspecified",report_name_original[0:-5])
     soup = BeautifulSoup(html_file, "html.parser")
 
+    # if subject is unspecified, replace it by the report name
+    script_tag = soup.find(
+        "script", string=lambda text: text and 'var sub = "unspecified";' in text
+    )
+    if script_tag:
+        report_name = op.basename(path_html_file)
+        script_tag.string = script_tag.string.replace(
+            'var sub = "unspecified";',
+            f'var sub = "{report_name.replace(".html", "")}";',
+        )
 
-    # Find all img tags with SVG source
-    svg_tags = soup.find_all('img', {'src': lambda src: src.endswith('.svg')})
-
-    # Loop through each SVG tag
-    original_work_dir=os.getcwd()
-    html_file_dir= os.path.dirname(path_html_file)
+    # Embed the SVG images in the HTML files otherwise they are not displayed
+    svg_tags = soup.find_all("img", {"src": lambda src: src.endswith(".svg")})
+    original_work_dir = os.getcwd()
+    html_file_dir = op.dirname(path_html_file)
     os.chdir(html_file_dir)
     for svg in svg_tags:
         # Open the SVG file and read its contents
-        with open(svg['src'], 'rb') as file:
+        with open(svg["src"], "rb") as file:
             svg_data = file.read()
 
         # Convert the SVG data to base64 encoding
-        base64_data = base64.b64encode(svg_data).decode('utf-8')
+        base64_data = base64.b64encode(svg_data).decode("utf-8")
 
         # Replace the SVG source with the base64-encoded data
-        svg['src'] = 'data:image/svg+xml;base64,' + base64_data
+        svg["src"] = "data:image/svg+xml;base64," + base64_data
     os.chdir(original_work_dir)
-    if anonymized:
-        summary_para = soup.find(id="summary")
-        if summary_para:
-            parent_para = summary_para.parent
-            parent_para.li.extract()
-            parent_para.li.extract()
 
-            iqm_para = soup.find(id="iqms-table")
-            iqm_para.decompose()
-        about_para= soup.find(id="About")
-        if about_para:
-            about_para.decompose()
+    # Remove Reproducibility and provenance information section to remove access to the IQMs
+    iqms_section = soup.find("h2", id="about-metadata-2")
+    iqms_section.decompose()
 
+    # Replace the download button by a submit button
     button_container = soup.find(id="btn-download").parent
     new_button_tag = soup.new_tag("button")
     new_button_tag["class"] = "btn btn-primary"
@@ -356,57 +391,24 @@ def patch_javascript_submit_button(
     new_button_tag["disabled"] = ""
     new_button_tag.string = "Submit"
     button_container.append(new_button_tag)
-    button_post=soup.find(id="btn-post")
+    button_post = soup.find(id="btn-post")
     if button_post:
         button_post.decompose()
     soup.find(id="btn-download").decompose()
 
+    # Define the behavior of clicking on the submit button
+    # Notably, disable submit button for a set amount of time
+    # It enforces the raters to spend at least that time to assign a quality rating
     script_tag = soup.body.script
-    if "MINIMUM_RATING_TIME" in script_tag.string:
-
-        with open("./scripts_js/script_button_rating_widget_template_new.txt", "r") as file:
-            js_patch = file.read()
-        js_patch = js_patch.replace("IP_ADDRESS", "localhost")
-
-        #js_patch=script_tag.string
-    else:
-        with open("./scripts_js/script_button_rating_widget_template.txt", "r") as file:
-            js_patch = file.read()
-        js_patch = js_patch.replace("IP_ADDRESS", "localhost")
-    if two_folders:
-        js_patch_head = soup.head.findAll("script")[2]
-
-        js_patch_head.string = js_patch_head.string.replace(
-            'var sub = "sub-', 'var sub = "' + report_name_original[0:12] + "sub-"
-        )
-
+    with open(
+        "./scripts_js/script_button_rating_widget_template_minimum_time.txt", "r"
+    ) as file:
+        js_patch = file.read()
+    js_patch = js_patch.replace("IP_ADDRESS", "localhost")
     script_tag.string = js_patch
 
-    if anonymized:
-        path_data = (
-            "./templates/templates_user_"
-            + username
-            + "/"
-            + dataset_name
-            + "_anonymized"
-        )
-    else:
-        path_data = (
-            "./templates/templates_user_"
-            + username
-            + "/"
-            + dataset_name
-            + "_non-anonymized"
-        )
-    if not os.path.exists(path_data):
-        os.makedirs(path_data)
-    if two_folders:
-        with open(path_data + "/" + report_name_original[12:], "w") as file:
-            file.write(str(soup))
-    else:
-        with open(path_data + "/" + report_name_original, "w") as file:
-            file.write(str(soup))
-    return path_data
+    modified_mriqc_report = str(soup)
+    return modified_mriqc_report
 
 
 @login_manager.user_loader
@@ -442,14 +444,14 @@ def login():
 
         if form.validate_on_submit():
             user = User.objects(username=form.username.data).first()
-            print(form.password.data, file=sys.stderr)
             if user is None or not user.check_password(form.password.data):
+                app.logger.error("Invalid username or password")
                 flash("Invalid username or password")
                 return redirect(url_for("login"))
             login_user(user)
             return redirect("/" + current_user.username)
     return render_template(
-        os.path.relpath("./templates/login.html", template_folder), form=form
+        op.relpath("./templates/login.html", template_folder), form=form
     )
 
 
@@ -472,25 +474,21 @@ def register():
                     password=generate_password_hash(form.password.data),
                 )
                 user.save()
-                if not os.path.exists(
-                    "/templates/templates_user_" + form.username.data
-                ):
-                    os.makedirs("./templates/templates_user_" + form.username.data)
-                flash("Congratulations, you are now a registered user!")
+                app.logger.info("User %s registered", user.username)
                 return redirect("/login")
             else:
-                flash("Username already existing, please login")
+                flash("Please login.", "error")
                 return redirect("/login")
 
     return render_template(
-        os.path.relpath("./templates/register.html", template_folder), form=form
+        op.relpath("./templates/register.html", template_folder), form=form
     )
 
 
 @app.route("/register_new_user", methods=["POST", "GET"])
 def register_new_user():
     """
-    route the app to the register form page
+    route the app to the page to register a new user
     """
 
     form = RegistrationForm()
@@ -504,18 +502,19 @@ def register_new_user():
                     password=generate_password_hash(form.password.data),
                 )
                 user.save()
-                if not os.path.exists(
-                    "/templates/templates_user_" + form.username.data
-                ):
-                    os.makedirs("./templates/templates_user_" + form.username.data)
-                flash("Congratulations, you are now a registered user!")
                 return redirect("/admin_panel")
             else:
-                flash("Username already existing, please login")
-                return redirect("/admin_panel")
+                # Clear the form to remove the entered username and password
+                form.username.data = ""
+                form.password.data = ""
+                flash("Please use a different username.", "error")
+                return render_template(
+                    op.relpath("./templates/register_new_user.html", template_folder),
+                    form=form,
+                )
 
     return render_template(
-        os.path.relpath("./templates/register_new_user.html", template_folder),
+        op.relpath("./templates/register_new_user.html", template_folder),
         form=form,
     )
 
@@ -523,7 +522,7 @@ def register_new_user():
 @app.route("/change_pwd", methods=["POST", "GET"])
 def change_psw():
     """
-    route the app to the register form page
+    route the app to the page to change password
     """
 
     form = ChangepswForm()
@@ -536,13 +535,14 @@ def change_psw():
                     user.update_one(
                         set__password=generate_password_hash(form.password.data)
                     )
+                    app.logger.info("Password changed")
                     return redirect("/login")
 
         else:
             return redirect("/login")
 
     return render_template(
-        os.path.relpath("./templates/change_psw.html", template_folder),
+        op.relpath("./templates/change_psw.html", template_folder),
         form=form,
         username=username_1,
     )
@@ -569,9 +569,10 @@ def add_admin():
             username_selected = list_users[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=True)
+            app.logger.info("User %s is now an admin", user.username)
             return redirect("/admin_panel")
         return render_template(
-            os.path.relpath("./templates/add_admin.html", template_folder),
+            op.relpath("./templates/add_admin.html", template_folder),
             number_users=len(list_users),
             list_users=list_users,
         )
@@ -591,10 +592,11 @@ def remove_admin():
             username_selected = list_admin[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.update_one(set__is_admin=False)
+            app.logger.info("User %s is no longer an admin", user.username)
             return redirect("/admin_panel")
 
         return render_template(
-            os.path.relpath("./templates/remove_admin.html", template_folder),
+            op.relpath("./templates/remove_admin.html", template_folder),
             number_users=len(list_admin),
             list_users=list_admin,
         )
@@ -614,9 +616,10 @@ def remove_user():
             username_selected = list_user[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
             user.delete()
+            app.logger.info("User %s has been deleted", username_selected)
             return redirect("/admin_panel")
         return render_template(
-            os.path.relpath("./templates/remove_user.html", template_folder),
+            op.relpath("./templates/remove_user.html", template_folder),
             number_users=len(list_user),
             list_users=list_user,
         )
@@ -639,10 +642,10 @@ def remove_dataset():
             inspections = Inspection.objects(Q(dataset=name_selected))
             for inspection in inspections:
                 inspection.delete()
-
+            app.logger.info("Dataset %s has been deleted", name_selected)
             return redirect("/admin_panel")
         return render_template(
-            os.path.relpath("./templates/remove_dataset.html", template_folder),
+            op.relpath("./templates/remove_dataset.html", template_folder),
             number_dataset=len(list_dataset),
             list_dataset=list_dataset,
         )
@@ -657,7 +660,6 @@ def remove_inspection():
     route the app to the remove inspection page
     """
     if current_user.is_admin:
-
         list_inspection_username = Inspection.objects.all().values_list("username")
         list_inspection_dataset = Inspection.objects.all().values_list("dataset")
         list_inspection_id = Inspection.objects.all().values_list("id")
@@ -665,67 +667,17 @@ def remove_inspection():
             id_selected = list_inspection_id[int(request.form.get("users dropdown"))]
             inspection = Inspection.objects(Q(id=id_selected))
             inspection.delete()
-
+            app.logger.info("Inspection %s has been deleted", id_selected)
             return redirect("/admin_panel")
 
         return render_template(
-            os.path.relpath("./templates/remove_inspection.html", template_folder),
+            op.relpath("./templates/remove_inspection.html", template_folder),
             number_inspection=len(list_inspection_username),
             list_username=list_inspection_username,
             list_dataset=list_inspection_dataset,
         )
     else:
         return redirect("/login")
-
-
-@app.route("/index-<username>/A-<report_name>")
-@login_required
-def display_report_anonymized(username, report_name):
-    """
-    display anonymized report A-<report_name>
-    """
-    dataset_name = report_name.split("_")[0]
-    current_inspection = Inspection.objects(
-        Q(dataset=dataset_name) & Q(username=username)
-    )
-    original_names = current_inspection.values_list("names_shuffled")
-    anonymized_names = current_inspection.values_list("names_anonymized")
-
-
-
-    ind_name = np.where(np.array(anonymized_names[0]) == "A-" + report_name)
-    report_name_original = np.array(original_names[0])[ind_name][0]
-    dataset_path = str(
-        Dataset.objects(name=dataset_name).values_list("path_dataset")[0]
-    )
-    path_templates_mriqc = dataset_path + report_name_original
-    if report_name_original.startswith("/condition"):
-        path_anonymized_data = patch_javascript_submit_button(
-            path_templates_mriqc,
-            username,
-            dataset_name,
-            report_name_original,
-            anonymized=True,
-            two_folders=True,
-        )
-        return render_template(
-            os.path.relpath(
-                path_anonymized_data + "/" + report_name_original[12:], template_folder
-            )
-        )
-    else:
-        path_anonymized_data = patch_javascript_submit_button(
-            path_templates_mriqc,
-            username,
-            dataset_name,
-            report_name_original,
-            anonymized=True,
-        )
-        return render_template(
-            os.path.relpath(
-                path_anonymized_data + "/" + report_name_original, template_folder
-            )
-        )
 
 
 @app.route("/index-<username>/sub-<report_name>")
@@ -738,62 +690,20 @@ def display_report_non_anonymized(username, report_name):
     dataset = user.current_dataset
     dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
 
-    path_templates_mriqc = dataset_path + "sub-" + report_name
-    path_modified_template = patch_javascript_submit_button(
-        path_templates_mriqc, username, dataset, "sub-" + report_name, anonymized=False
-    )
+    app.logger.debug("Searching recursively for a report named %s under %s.", report_name, dataset_path)
+
+    mriqc_report = ""
+    path_mriqc_report = glob.glob(os.path.join(dataset_path, "**", "sub-" + report_name), recursive=True)
+    if len(path_mriqc_report) == 0:
+        app.logger.error("No report named %s was found in the children of %s.","sub-" + report_name, dataset_path)
+    else:
+        path_mriqc_report = path_mriqc_report[0]
+        # Modify the html to adapt it to Q'kay    
+        mriqc_report = modify_mriqc_report(path_mriqc_report)
+
     return render_template(
-        os.path.relpath(path_modified_template + "/sub-" + report_name, template_folder)
-    )
-
-
-@app.route("/condition1/<report_name>")
-@login_required
-def display_report_two_folder_non_anonymized_cond1(report_name):
-    """
-    display report sub-<subject_number>
-    """
-    username = current_user.username
-    user = User.objects(username=username).first()
-    dataset = user.current_dataset
-    dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
-
-    path_templates_mriqc = dataset_path + "/condition1/" + report_name
-    path_modified_template = patch_javascript_submit_button(
-        path_templates_mriqc,
-        username,
-        dataset,
-        "/condition1/" + report_name,
-        anonymized=False,
-        two_folders=True,
-    )
-    return render_template(
-        os.path.relpath(path_modified_template + "/" + report_name, template_folder)
-    )
-
-
-@app.route("/condition2/<report_name>")
-@login_required
-def display_report_two_folder_non_anonymized_cond2(report_name):
-    """
-    display report sub-<subject_number>
-    """
-    username = current_user.username
-    user = User.objects(username=username).first()
-    dataset = user.current_dataset
-    dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
-
-    path_templates_mriqc = dataset_path + "/condition2/" + report_name
-    path_modified_template = patch_javascript_submit_button(
-        path_templates_mriqc,
-        username,
-        dataset,
-        "/condition2/" + report_name,
-        anonymized=False,
-        two_folders=True,
-    )
-    return render_template(
-        os.path.relpath(path_modified_template + "/" + report_name, template_folder)
+        op.relpath("./templates/report.html", template_folder),
+        html_content=mriqc_report,
     )
 
 
@@ -823,9 +733,7 @@ def info_user(username):
         pass
     if current_user.is_admin:
         return render_template(
-            os.path.relpath(
-                "./templates/user_panel_admin_version.html", template_folder
-            ),
+            op.relpath("./templates/user_panel_admin_version.html", template_folder),
             list_inspections_assigned=list_inspections_assigned,
             number_inspections=len(list_inspections_assigned),
             username=username,
@@ -833,7 +741,7 @@ def info_user(username):
         )
     else:
         return render_template(
-            os.path.relpath("./templates/user_panel.html", template_folder),
+            op.relpath("./templates/user_panel.html", template_folder),
             list_inspections_assigned=list_inspections_assigned,
             number_inspections=len(list_inspections_assigned),
             username=username,
@@ -851,6 +759,10 @@ def display_index_inspection(username, dataset):
     user.current_dataset = dataset
     user.save()
     path_index = "./templates/index.html"
+
+    app.logger.debug("Searching for inspection matching dataset %s and username %s.", dataset, username)
+
+    # Find in the inspection which reports have been rated
     current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username))
     array_rated = (
         np.array(
@@ -859,8 +771,10 @@ def display_index_inspection(username, dataset):
         + 0
     ).tolist()
     names_files = current_inspection.values_list("names_anonymized")[0]
+    app.logger.debug("%i files found to rate.", len(names_files))
+
     return render_template(
-        os.path.relpath(path_index, template_folder),
+        op.relpath(path_index, template_folder),
         array_rated=array_rated,
         index_list=names_files,
         url_index="/index-" + str(username) + "/" + str(dataset),
@@ -879,21 +793,18 @@ def admin_panel():
         list_users = User.objects.all().values_list("username")
         list_datasets = Dataset.objects.all().values_list("name")
         list_admin = User.objects(Q(is_admin=True)).values_list("username")
-        list_inspection_username = Inspection.objects.all().values_list("username")
-        list_inspection_dataset = Inspection.objects.all().values_list("dataset")
+        list_inspection = [
+            f"{inspection.dataset} -> {inspection.username}"
+            for inspection in Inspection.objects.all()
+        ]
         if request.method == "POST":
             pass
         return render_template(
-            os.path.relpath("./templates/admin_panel.html", template_folder),
-            number_users=len(list_users),
+            op.relpath("./templates/admin_panel.html", template_folder),
             list_users=list_users,
             list_admin=list_admin,
-            number_admin=len(list_admin),
-            number_datasets=len(list_datasets),
             list_datasets=list_datasets,
-            list_inspection_username=list_inspection_username,
-            list_inspection_dataset=list_inspection_dataset,
-            number_inspection=len(list_inspection_username),
+            list_inspection=list_inspection,
         )
     else:
         return redirect("/login")
@@ -905,29 +816,72 @@ def create_dataset():
     Create a Dataset object with the parameters given in the form
     """
     if request.method == "POST":
-        dataset_name = request.form["name"]
-        dataset_path = request.form["path"]
-        try:
-            secondfile = os.listdir(dataset_path)[0]
+        selected_datasets = request.form.getlist("datasets[]")
+        for d in selected_datasets:
+            dataset_path = op.join("/datasets", d)
+            app.logger.debug("Searching recursively for dataset_description.json under %s.", dataset_path) 
+
+            # Get dataset name from the data_description.json file if it exists
+            # otherwise, use the folder name
+            desc_file = ""
+            desc_files = glob.glob(os.path.join(dataset_path, "**", "dataset_description.json"), recursive=True)
+            if len(desc_files) > 1:
+                app.logger.warning("More than one dataset_description.json was found!: %s .", desc_files) 
+            
+            desc_file = desc_files[0]
+            app.logger.debug("dataset_description.json found at %s.", desc_file) 
+            if desc_file:
+                with open(desc_file, "r") as file:
+                    data_description = json.load(file)
+                    dataset_name = data_description["Name"]
+                    app.logger.info("The dataset name %s was assigned based on the name in %s", dataset_name, desc_file) 
+                # If the name of the dataset is the default MRIQC value, use the folder name instead
+                if dataset_name == "MRIQC - MRI Quality Control":
+                    app.logger.info("The dataset name is the default of MRIQC which is not informative, using folder name instead: %s.", d) 
+                    dataset_name = d
+            else:
+                app.logger.info("No dataset_description.json found, assigning dataset name to folder name: %s.", d) 
+                dataset_name = d
+
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
-            dataset.save()
-            return redirect("/admin_panel")
-        except:
-            return redirect("/empty_dataset")
+            existing_dataset = Dataset.objects(name=dataset_name).first()
+            if not dataset.validate_dataset():
+                app.logger.error(
+                    "The directory %s does not exist or does not contain any HTML files.",
+                    dataset_path,
+                )
+                flash(
+                    "The directory %s does not exist or does not contain any HTML files. Please select another dataset."
+                    % dataset_path,
+                    "error",
+                )
+                return redirect("/create_dataset")
+            elif existing_dataset:
+                app.logger.error("The dataset %s already exists.", dataset_name)
+                flash(
+                    "The dataset %s already exists. Please select another dataset."
+                    % dataset_name,
+                    "error",
+                )
+                return redirect("/create_dataset")
+            else:
+                dataset.save()
+                app.logger.info(
+                    "New dataset named %s created from %s.", dataset_name, dataset_path
+                )
 
+        return redirect("/admin_panel")
+
+    # Extract the list of folders under the directory /datasets
+    datasets = [
+        folder
+        for folder in os.listdir("/datasets")
+        if op.isdir(op.join("/datasets", folder))
+    ]
+    app.logger.debug("List of folders under /datasets: %s", datasets)
     return render_template(
-        os.path.relpath("./templates/create_dataset.html", template_folder)
-    )
-
-
-@app.route("/empty_dataset", methods=["POST", "GET"])
-@login_required
-def empty_dataset():
-    """
-    display an error message when the dataset is empty
-    """
-    return render_template(
-        os.path.relpath("./templates/error_empty_dataset.html", template_folder)
+        op.relpath("./templates/create_dataset.html", template_folder),
+        datasets=datasets,
     )
 
 
@@ -939,8 +893,10 @@ def assign_dataset():
     list_users = User.objects.all().values_list("username")
     list_datasets = Dataset.objects.all().values_list("name")
     if request.method == "POST":
-        dataset_selected = list_datasets[int(request.form.get("datasets dropdown"))]
-        username = list_users[int(request.form.get("users dropdown"))]
+        dataset_selected = request.form.get("datasets dropdown")
+        app.logger.debug("Dataset %s selected for inspection", dataset_selected)
+        username = request.form.get("users dropdown")
+        app.logger.debug("User %s selected for inspection", username)
         randomize = request.form.get("option_randomize")
         rate_all = request.form.get("option_rate_all")
         blind = request.form.get("option_blind")
@@ -951,6 +907,9 @@ def assign_dataset():
         )
 
         names_files = list_individual_reports(dataset_path, two_folders=two_datasets)
+        app.logger.debug(
+            "%s reports found at %s", len(names_files), dataset_path
+        )
         new_names = names_files
         if rate_all:
             names_repeated = repeat_reports(new_names, 40, two_folders=two_datasets)
@@ -983,13 +942,16 @@ def assign_dataset():
             index_rated_reports=index_rated_reports,
         )
         inspection.save()
+        app.logger.info(
+            "Dataset %s has been assigned for inspection to user %s.",
+            dataset_selected,
+            username,
+        )
         return redirect("/admin_panel")
 
     return render_template(
-        os.path.relpath("./templates/assign_dataset.html", template_folder),
-        number_users=len(list_users),
+        op.relpath("./templates/assign_dataset.html", template_folder),
         list_users=list_users,
-        number_datasets=len(list_datasets),
         list_datasets=list_datasets,
     )
 
@@ -1014,6 +976,7 @@ def receive_report():
     ind_name = np.where(np.array(shuffled_names[0]) == str(report.subject) + ".html")
     index_rated[0][ind_name] = True
     current_inspection.update_one(set__index_rated_reports=index_rated[0].tolist())
+    app.logger.info("Report %s has been rated by user %s.", report.subject, username)
     return redirect("/index-" + username + "/" + dataset, code=307)
 
 

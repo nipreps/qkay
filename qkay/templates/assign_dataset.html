@@ -63,9 +63,9 @@
 
 <select class="form-select form-select-lg mb-3" name="users dropdown" aria-label="users dropdown">
 	<option selected>Users</option>
-	{%for i in range(0, number_users)%}
+	{%for user in list_users%}
 			
-				<option value={{i}}>{{list_users[i]}}</option>
+				<option value={{user}}>{{user}}</option>
 			    
 			
 	{%endfor%}
@@ -74,15 +74,15 @@
 
 <select class="form-select form-select-lg mb-3" name="datasets dropdown" aria-label="datasets dropdown">
   <option selected>Datasets</option>
- {%for i in range(0, number_datasets)%}
+ {%for dataset in list_datasets%}
 			
-				<option value={{i}}>{{list_datasets[i]}}</option>
+				<option value="{{dataset}}">{{dataset}}</option>
 			    
 			
 	{%endfor%}
 </select>
           <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="check1" name="option_randomize" value=True checked>
+              <input type="checkbox" class="form-check-input" id="check1" name="option_randomize" value=True>
               <label class="form-check-label" for="check1">Randomize</label>
           </div>
           <div class="form-check">

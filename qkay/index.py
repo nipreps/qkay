@@ -1,9 +1,7 @@
-from config import IndexTemplate
-from pathlib import Path
-import os
-import glob
-import random
 import copy
+import glob
+import os
+import random
 
 
 def list_individual_reports(path_reports, two_folders=False):
@@ -32,7 +30,7 @@ def list_individual_reports(path_reports, two_folders=False):
     else:
         list_of_files = [
             os.path.basename(filename)
-            for filename in glob.glob(path_reports + "sub-*.html")
+            for filename in glob.glob(path_reports + "/**/sub-*.html", recursive=True)
         ]
     return list_of_files
 

@@ -31,7 +31,6 @@
 #
 """Utilities: Jinja2 templates."""
 from io import open  # pylint: disable=W0622
-from pkg_resources import resource_filename as pkgrf
 
 
 class Template(object):
@@ -67,7 +66,7 @@ class IndividualTemplate(Template):
 
     def __init__(self):
         super(IndividualTemplate, self).__init__(
-            "/home/esavary/Projects/app-visualization/templates/reports.html"
+            "./templates/reports.html"
         )
 
 
@@ -76,5 +75,5 @@ class IndexTemplate(Template):
 
     def __init__(self):
         super(IndexTemplate, self).__init__(
-            "/home/esavary/Projects/app-visualization/templates/index.html"
+            "./templates/index.html"
         )
