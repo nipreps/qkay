@@ -899,8 +899,10 @@ def assign_dataset():
         app.logger.debug("User %s selected for inspection", username)
         randomize = request.form.get("option_randomize")
         app.logger.debug("Randomize %s", randomize)
-        rate_all = request.form.get("option_rate_all")
-        app.logger.debug("Repeat images %s", rate_all)
+        repeat = request.form.get("option_repeat")
+        app.logger.debug("Repeat images %s", repeat)
+        number_rep = int(request.form.get("repeat_count"))
+        app.logger.debug("Number of repetitions %s", number_rep)
         blind = request.form.get("option_blind")
         app.logger.debug("Blind inspection %s", blind)
         random_seed = random.randint(0, 100000)
@@ -913,8 +915,8 @@ def assign_dataset():
             "%s reports found at %s", len(names_files), dataset_path
         )
         new_names = names_files
-        if rate_all:
-            names_repeated = repeat_reports(new_names, 40)
+        if repeat:
+            names_repeated = repeat_reports(new_names, number_rep)
         else:
             names_repeated = names_files
         if randomize:
@@ -935,7 +937,7 @@ def assign_dataset():
             username=username,
             randomize=randomize,
             blind=blind,
-            rate_all=rate_all,
+            rate_all=repeat,
             names_files=names_files,
             names_shuffled=names_shuffled,
             names_anonymized=names_anonymized,

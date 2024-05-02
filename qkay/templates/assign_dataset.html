@@ -86,9 +86,14 @@
               <label class="form-check-label" for="check1">Randomize</label>
           </div>
           <div class="form-check">
-              <input type="checkbox" class="form-check-input" id="check2" name="option_rate_all" value=True>
-              <label class="form-check-label" for="check2">Repeat images</label>
+            <input type="checkbox" class="form-check-input" id="check2" name="option_repeat" value="True">
+            <label class="form-check-label" for="check2">Repeat images</label>
+              <div class="input-group">
+                  <label class="input-group-text" for="repeat_count">Number of repetitions</label>
+                  <input type="number" class="form-control" id="repeat_count" name="repeat_count" value="0" min="0">
+              </div>
           </div>
+        
           <div class="form-check">
               <input type="checkbox" class="form-check-input" id="check3" name="option_blind" value=True>
               <label class="form-check-label">Blind inspection</label>
