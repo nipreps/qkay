@@ -898,21 +898,23 @@ def assign_dataset():
         username = request.form.get("users dropdown")
         app.logger.debug("User %s selected for inspection", username)
         randomize = request.form.get("option_randomize")
+        app.logger.debug("Randomize %s", randomize)
         rate_all = request.form.get("option_rate_all")
+        app.logger.debug("Repeat images %s", rate_all)
         blind = request.form.get("option_blind")
-        two_datasets = request.form.get("option_two_datasets")
+        app.logger.debug("Blind inspection %s", blind)
         random_seed = random.randint(0, 100000)
         dataset_path = str(
             Dataset.objects(name=dataset_selected).values_list("path_dataset")[0]
         )
 
-        names_files = list_individual_reports(dataset_path, two_folders=two_datasets)
+        names_files = list_individual_reports(dataset_path)
         app.logger.debug(
             "%s reports found at %s", len(names_files), dataset_path
         )
         new_names = names_files
         if rate_all:
-            names_repeated = repeat_reports(new_names, 40, two_folders=two_datasets)
+            names_repeated = repeat_reports(new_names, 40)
         else:
             names_repeated = names_files
         if randomize:
@@ -922,7 +924,7 @@ def assign_dataset():
         if blind:
             names_anonymized = anonymize_reports(names_repeated, dataset_selected)
         else:
-            names_anonymized = names_repeated
+            names_anonymized = names_shuffled
 
         names_subsample = names_repeated
 
