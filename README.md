@@ -30,11 +30,9 @@ To run qkay using Docker Compose, follow these steps:
         Username: Admin
         Password: abcd
     6. Once you have logged in, go to the Admin panel and change your password to something more secure.
-    7. Once you have logged in, go to the Admin panel and add a dataset by clicking on the "Add Dataset" button. You will need to provide the following information:
-    Dataset Name: The name of the dataset you want to add.
-    Dataset Path: The path to the dataset on your computer relative to the /datasets/ folder mounted in the Docker image. For example, if the dataset is located at /data/ds1 on your computer and your .env file contains the variable DATASETS_PATH=/data/, you should enter /datasets/ds1/ as the dataset path. Note that the DATASETS_PATH variable in the .env file specifies the parent folder that contains all datasets, and the dataset path you enter in the Admin panel should be a subfolder of this parent folder, mounted as /datasets/ in the Docker image.
+    7. Once you have logged in, go to the Admin panel and add a dataset by clicking on the "Add Dataset" button. You will find the list of all datasets in the folder indicated in the .env file. Select the dataset you want to add.
 
 # Contributing
-We welcome contributions to Qkay. Please read the [contributing guide](https://github.com/nipreps/qkay/blob/docker-version/CONTRIBUTING.md) to get started.
+We welcome contributions to Qkay. Please read the [contributing guide](https://www.nipreps.org/community/CONTRIBUTING/) to get started.
 # License
 Qkay is released under the Apache 2.0 License.
