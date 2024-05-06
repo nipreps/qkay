@@ -28,7 +28,7 @@ Before using Q'kay with Docker, you will need to set up the necessary environmen
 Run the containers with Docker Compose:
 
     .. code-block:: bash
-        
+
         $ docker-compose up
 
 After running the containers, you can access the application at `http://localhost`.
@@ -46,20 +46,24 @@ To begin using Q'kay, follow these steps:
 
 3. After logging in, it is recommended to go to the Admin panel and change your password to something more secure.
 
-4. In the Admin panel, you can add your first dataset by clicking on the "Add Dataset" button. Provide the following information for the dataset:
-   - **Dataset Name:** The name of the dataset you want to add.
-   - **Dataset Path:** The path to the dataset on your computer relative to the `/datasets/` folder mounted in the Docker image. For example, if the dataset is located at `/data/ds1` on your computer and your `.env` file contains the variable `DATASETS_PATH=/data/`, you should enter `/datasets/ds1/` as the dataset path. Note that the `DATASETS_PATH` variable in the `.env` file specifies the parent folder that contains all datasets, and the dataset path you enter in the Admin panel should be a subfolder of this parent folder, mounted as `/datasets/` in the Docker image.
+4. In the Admin panel, you can add your first dataset by clicking on the "Add Dataset" button. You will see the list all of datasets present in the folder dataset you indicated in the `.env` file. Select the dataset you want to add and click on the "Add" button. 
+The name of the dataset is inferred from the file dataset_description.json in the folder of the dataset if it exists. If it does not exist, the name of the dataset will be the name of the folder.
+   
 5. Add your first users
     - In the Admin panel, click on the "Add User" button to add a new user.
     - Provide the following information for the user:
       - **Username:** The username for the new user.
       - **Password:** The password for the new user.
-    They will be able to update their password after logging in.
+
+They will be able to update their password after logging in.
+
 6. Assign the dataset to the user
     - In the Admin panel, click on the "Assign Dataset" button to assign a dataset to a user.
     - Select the user from the dropdown list.
     - Select the dataset from the dropdown list.
     - Select the options such as randomize the order, repeat or anonymize the reports.
     - Click on the "Assign" button.
+
 7. The user can now log in and start rating the images in the dataset assigned to them.
+
 
