@@ -4,7 +4,7 @@ import os
 import random
 
 
-def list_individual_reports(path_reports, two_folders=False):
+def list_individual_reports(path_reports):
     """
     Returns the list of all html reports in path_reports
 
@@ -16,22 +16,10 @@ def list_individual_reports(path_reports, two_folders=False):
     -------
     List of reports
     """
-    if two_folders:
-        list_of_file_condition1 = [
-            "/condition1/" + os.path.basename(filename)
-            for filename in glob.glob(path_reports + "condition1/" + "sub-*.html")
-        ]
-        list_of_file_condition2 = [
-            "/condition2/" + os.path.basename(filename)
-            for filename in glob.glob(path_reports + "condition2/" + "sub-*.html")
-        ]
-
-        list_of_files = list_of_file_condition1 + list_of_file_condition2
-    else:
-        list_of_files = [
-            os.path.basename(filename)
-            for filename in glob.glob(path_reports + "/**/sub-*.html", recursive=True)
-        ]
+    list_of_files = [
+        os.path.basename(filename)
+        for filename in glob.glob(path_reports + "/**/sub-*.html", recursive=True)
+    ]
     return list_of_files
 
 
@@ -75,30 +63,30 @@ def anonymize_reports(shuffled_list, dataset_name):
     return anonymized_report_list
 
 
-def repeat_reports(original_list, number_of_subjects_to_repeat, two_folders=False):
+def repeat_reports(original_list, number_of_subjects_to_repeat):
+    """
+    Repeat a subset of reports in a deep copy of the original list.
+
+    Parameters:
+    original_list (list): The original list of reports.
+    number_of_subjects_to_repeat (int): The number of subjects to repeat.
+
+    Returns:
+    list: A new list with the specified subset repeated, leaving the original list intact.
+
+    Note:
+    This function creates a deep copy of the original list and then randomly selects a subset of reports
+    from the copied list. The selected subset is appended to the end of the copied list, effectively repeating them.
+    The random seed for selection is based on the given day and time.
+    """
     day = 220830
     time = 543417
     random.seed(day + time)
-    if two_folders:
+    copied_list = copy.deepcopy(original_list)
+    subset_rep = random.sample(copied_list, number_of_subjects_to_repeat)
+    copied_list.extend(subset_rep)
 
-        # Randomly select subjects that will be shown twice, the subjects are the same in the two sets
-        list_condition1 = [s for s in original_list if "condition1" in s]
-        sourceFile = open("demo.txt", "w")
-        print(original_list, list_condition1, file=sourceFile)
-        sourceFile.close()
-        subset_rep_condition1 = random.sample(
-            list_condition1, number_of_subjects_to_repeat
-        )
-        subset_rep_condition2 = [
-            s.replace("condition1", "condition2") for s in subset_rep_condition1
-        ]
-        subset_rep = subset_rep_condition1 + subset_rep_condition2
-    else:
-        # Randomly select subjects that will be shown twice
-        subset_rep = random.sample(original_list, number_of_subjects_to_repeat)
-
-    original_list.extend(subset_rep)
-    return original_list
+    return copied_list
 
 
 if __name__ == "__main__":
