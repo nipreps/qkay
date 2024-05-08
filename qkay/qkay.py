@@ -133,7 +133,7 @@ class User(UserMixin, db.Document):
     password = db.StringField()
     is_admin = db.BooleanField(default=False)
     dataset_list = db.ListField()
-    current_dataset = db.StringField()
+    current_inspection_param = db.ListField()
     meta = {"collection": "users"}
 
     def set_password(self, password):
@@ -687,7 +687,7 @@ def display_report_non_anonymized(username, report_name):
     display report sub-<subject_number>
     """
     user = User.objects(username=username).first()
-    dataset = user.current_dataset
+    dataset = user.current_inspection_param[0]
     dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
 
     app.logger.debug("Searching recursively for a report named %s under %s.", report_name, dataset_path)
@@ -695,10 +695,10 @@ def display_report_non_anonymized(username, report_name):
     mriqc_report = ""
     path_mriqc_report = glob.glob(os.path.join(dataset_path, "**", "sub-" + report_name), recursive=True)
     if len(path_mriqc_report) == 0:
-        app.logger.error("No report named %s was found in the children of %s.","sub-" + report_name, dataset_path)
+        app.logger.error("No report named %s was found in the children of %s.", "sub-" + report_name, dataset_path)
     else:
         path_mriqc_report = path_mriqc_report[0]
-        # Modify the html to adapt it to Q'kay    
+        # Modify the html to adapt it to Q'kay
         mriqc_report = modify_mriqc_report(path_mriqc_report)
 
     return render_template(
@@ -722,48 +722,50 @@ def info_user(username):
     """
     display user's panel
     """
-    list_inspections_assigned = Inspection.objects(username=username).values_list(
-        "dataset"
-    )
+    dataset_names = Inspection.objects(username=username).values_list("dataset")
+    blind_values = Inspection.objects(username=username).values_list("blind")
+    rate_all_values = Inspection.objects(username=username).values_list("rate_all")
+    randomize_values = Inspection.objects(username=username).values_list("randomize")
+
     route_list = [
-        "/index-" + username + "/" + str(name) for name in list_inspections_assigned
-    ]
+        "/index-" + username + "/" + str(dataset_names) + "-" + str(blind_values) + "-" + str(rate_all_values) + "-" + str(randomize_values)
+        for dataset_names, blind_values, rate_all_values, randomize_values in zip(dataset_names, blind_values, rate_all_values, randomize_values)]
 
     if request.method == "POST":
         pass
     if current_user.is_admin:
         return render_template(
             op.relpath("./templates/user_panel_admin_version.html", template_folder),
-            list_inspections_assigned=list_inspections_assigned,
-            number_inspections=len(list_inspections_assigned),
+            list_inspections_assigned=dataset_names,
+            number_inspections=len(dataset_names),
             username=username,
             route_list=route_list,
         )
     else:
         return render_template(
             op.relpath("./templates/user_panel.html", template_folder),
-            list_inspections_assigned=list_inspections_assigned,
-            number_inspections=len(list_inspections_assigned),
+            list_inspections_assigned=dataset_names,
+            number_inspections=len(dataset_names),
             username=username,
             route_list=route_list,
         )
 
 
-@app.route("/index-<username>/<dataset>", methods=["POST", "GET"])
+@app.route("/index-<username>/<dataset>-<blind>-<rateall>-<randomize>", methods=["POST", "GET"])
 @login_required
-def display_index_inspection(username, dataset):
+def display_index_inspection(username, dataset,blind,rateall,randomize):
     """
     display interactive list of files to grade
     """
     user = User.objects(username=username).first()
-    user.current_dataset = dataset
+    user.current_inspection_param = [dataset, blind, rateall, randomize]
     user.save()
     path_index = "./templates/index.html"
 
     app.logger.debug("Searching for inspection matching dataset %s and username %s.", dataset, username)
 
     # Find in the inspection which reports have been rated
-    current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username))
+    current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username) & Q(rate_all=(rateall == "True")) & Q(blind=(blind == "True")) & Q(randomize=(randomize == "True")))
     array_rated = (
         np.array(
             current_inspection.values_list("index_rated_reports")[0], dtype=np.int8
@@ -777,7 +779,7 @@ def display_index_inspection(username, dataset):
         op.relpath(path_index, template_folder),
         array_rated=array_rated,
         index_list=names_files,
-        url_index="/index-" + str(username) + "/" + str(dataset),
+        url_index="/index-" + str(username) + "/" + str(dataset)+"-"+str(blind) + "-"+str(rateall)+"-"+str(randomize),
         url_home="/" + str(username),
     )
 
@@ -819,28 +821,28 @@ def create_dataset():
         selected_datasets = request.form.getlist("datasets[]")
         for d in selected_datasets:
             dataset_path = op.join("/datasets", d)
-            app.logger.debug("Searching recursively for dataset_description.json under %s.", dataset_path) 
+            app.logger.debug("Searching recursively for dataset_description.json under %s.", dataset_path)
 
             # Get dataset name from the data_description.json file if it exists
             # otherwise, use the folder name
             desc_file = ""
             desc_files = glob.glob(os.path.join(dataset_path, "**", "dataset_description.json"), recursive=True)
             if len(desc_files) > 1:
-                app.logger.warning("More than one dataset_description.json was found!: %s .", desc_files) 
-            
+                app.logger.warning("More than one dataset_description.json was found!: %s .", desc_files)
+
             desc_file = desc_files[0]
-            app.logger.debug("dataset_description.json found at %s.", desc_file) 
+            app.logger.debug("dataset_description.json found at %s.", desc_file)
             if desc_file:
                 with open(desc_file, "r") as file:
                     data_description = json.load(file)
                     dataset_name = data_description["Name"]
-                    app.logger.info("The dataset name %s was assigned based on the name in %s", dataset_name, desc_file) 
+                    app.logger.info("The dataset name %s was assigned based on the name in %s", dataset_name, desc_file)
                 # If the name of the dataset is the default MRIQC value, use the folder name instead
                 if dataset_name == "MRIQC - MRI Quality Control":
-                    app.logger.info("The dataset name is the default of MRIQC which is not informative, using folder name instead: %s.", d) 
+                    app.logger.info("The dataset name is the default of MRIQC which is not informative, using folder name instead: %s.", d)
                     dataset_name = d
             else:
-                app.logger.info("No dataset_description.json found, assigning dataset name to folder name: %s.", d) 
+                app.logger.info("No dataset_description.json found, assigning dataset name to folder name: %s.", d)
                 dataset_name = d
 
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
@@ -968,20 +970,20 @@ def receive_report():
     """
     request_data = request.get_json()
     username = current_user.username
-    dataset = current_user.current_dataset
-    current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username))
+    current_inspection_param = current_user.current_inspection_param
+    current_inspection = Inspection.objects(Q(dataset=current_inspection_param[0]) & Q(username=username) & Q(rate_all=(current_inspection_param[2] == "True")) & Q(blind=(current_inspection_param[1] == "True")) & Q(randomize=(current_inspection_param[3] == "True")))
     shuffled_names = current_inspection.values_list("names_shuffled")
     index_rated = np.array(current_inspection.values_list("index_rated_reports"))
     report = Rating()
     report = report.from_json(json.dumps(request_data))
-    report.dataset = dataset
+    report.dataset = current_inspection_param[0]
     report.rater_id = username
     report.save()
     ind_name = np.where(np.array(shuffled_names[0]) == str(report.subject) + ".html")
     index_rated[0][ind_name] = True
     current_inspection.update_one(set__index_rated_reports=index_rated[0].tolist())
     app.logger.info("Report %s has been rated by user %s.", report.subject, username)
-    return redirect("/index-" + username + "/" + dataset, code=307)
+    return redirect("/index-" + username + "/" + current_inspection_param[0], code=307)
 
 
 if __name__ == "__main__":
