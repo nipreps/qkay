@@ -110,7 +110,7 @@
         // Check sender origin to be trusted
         console.log("message received")
         //if (event.origin !== "https://example.com") return;
-        if (event.srcElement.location.protocol != "file:") return; // Is this a security abberation?
+        if (event.srcElement.location.protocol != "file:") return; // Is this a security aberration?
         // I want to get any message that the rating is done on the iframe.
         var data = event.data;
         var keys = Object.keys(data)

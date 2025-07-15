@@ -178,35 +178,35 @@ class Dataset(db.Document):
 
 class Inspection(db.Document):
     """
-        Class to define an inspection
-        ...
+    Class to define an inspection
+    ...
 
-        Attributes
-        ----------
-        meta : dict
-            mongodb collection
-        dataset : str
-            name of the dataset to be inspected
-        username : str
-            name of the user assigned to the inspection
-        randomize : bool
-            If files must be shuffled
-        rate_all : bool
-            If all files must be rated
-        blind : bool
-            If reports must be anonymized
-        names_files : string list
-            list of filenames to grade
-        names_shuffled : string list
-            shuffled list of filenames
-        names_anonymized : string list
-            list of filenames anonymized and shuffled if randomize==True
-        names_subsample: string list
-            subsample of file to inspect if rate_all==False
-        random_seed: int
-            random seed used to shuffle the filename
-        index_rated_reports: list
-            index of reports already rated
+    Attributes
+    ----------
+    meta : dict
+        mongodb collection
+    dataset : str
+        name of the dataset to be inspected
+    username : str
+        name of the user assigned to the inspection
+    randomize : bool
+        If files must be shuffled
+    rate_all : bool
+        If all files must be rated
+    blind : bool
+        If reports must be anonymized
+    names_files : string list
+        list of filenames to grade
+    names_shuffled : string list
+        shuffled list of filenames
+    names_anonymized : string list
+        list of filenames anonymized and shuffled if randomize==True
+    names_subsample: string list
+        subsample of file to inspect if rate_all==False
+    random_seed: int
+        random seed used to shuffle the filename
+    index_rated_reports: list
+        index of reports already rated
     """
 
     meta = {"collection": "inspections"}
@@ -687,15 +687,25 @@ def display_report_non_anonymized(username, report_name):
     dataset = user.current_dataset
     dataset_path = str(Dataset.objects(name=dataset).values_list("path_dataset")[0])
 
-    app.logger.debug("Searching recursively for a report named %s under %s.", report_name, dataset_path)
+    app.logger.debug(
+        "Searching recursively for a report named %s under %s.",
+        report_name,
+        dataset_path,
+    )
 
     mriqc_report = ""
-    path_mriqc_report = glob.glob(os.path.join(dataset_path, "**", "sub-" + report_name), recursive=True)
+    path_mriqc_report = glob.glob(
+        os.path.join(dataset_path, "**", "sub-" + report_name), recursive=True
+    )
     if len(path_mriqc_report) == 0:
-        app.logger.error("No report named %s was found in the children of %s.","sub-" + report_name, dataset_path)
+        app.logger.error(
+            "No report named %s was found in the children of %s.",
+            "sub-" + report_name,
+            dataset_path,
+        )
     else:
         path_mriqc_report = path_mriqc_report[0]
-        # Modify the html to adapt it to Q'kay    
+        # Modify the html to adapt it to Q'kay
         mriqc_report = modify_mriqc_report(path_mriqc_report)
 
     return render_template(
@@ -757,7 +767,11 @@ def display_index_inspection(username, dataset):
     user.save()
     path_index = "./templates/index.html"
 
-    app.logger.debug("Searching for inspection matching dataset %s and username %s.", dataset, username)
+    app.logger.debug(
+        "Searching for inspection matching dataset %s and username %s.",
+        dataset,
+        username,
+    )
 
     # Find in the inspection which reports have been rated
     current_inspection = Inspection.objects(Q(dataset=dataset) & Q(username=username))
@@ -816,28 +830,47 @@ def create_dataset():
         selected_datasets = request.form.getlist("datasets[]")
         for d in selected_datasets:
             dataset_path = op.join("/datasets", d)
-            app.logger.debug("Searching recursively for dataset_description.json under %s.", dataset_path) 
+            app.logger.debug(
+                "Searching recursively for dataset_description.json under %s.",
+                dataset_path,
+            )
 
             # Get dataset name from the data_description.json file if it exists
             # otherwise, use the folder name
             desc_file = ""
-            desc_files = glob.glob(os.path.join(dataset_path, "**", "dataset_description.json"), recursive=True)
+            desc_files = glob.glob(
+                os.path.join(dataset_path, "**", "dataset_description.json"),
+                recursive=True,
+            )
             if len(desc_files) > 1:
-                app.logger.warning("More than one dataset_description.json was found!: %s .", desc_files) 
-            
+                app.logger.warning(
+                    "More than one dataset_description.json was found!: %s .",
+                    desc_files,
+                )
+
             desc_file = desc_files[0]
-            app.logger.debug("dataset_description.json found at %s.", desc_file) 
+            app.logger.debug("dataset_description.json found at %s.", desc_file)
             if desc_file:
                 with open(desc_file, "r") as file:
                     data_description = json.load(file)
                     dataset_name = data_description["Name"]
-                    app.logger.info("The dataset name %s was assigned based on the name in %s", dataset_name, desc_file) 
+                    app.logger.info(
+                        "The dataset name %s was assigned based on the name in %s",
+                        dataset_name,
+                        desc_file,
+                    )
                 # If the name of the dataset is the default MRIQC value, use the folder name instead
                 if dataset_name == "MRIQC - MRI Quality Control":
-                    app.logger.info("The dataset name is the default of MRIQC which is not informative, using folder name instead: %s.", d) 
+                    app.logger.info(
+                        "The dataset name is the default of MRIQC which is not informative, using folder name instead: %s.",
+                        d,
+                    )
                     dataset_name = d
             else:
-                app.logger.info("No dataset_description.json found, assigning dataset name to folder name: %s.", d) 
+                app.logger.info(
+                    "No dataset_description.json found, assigning dataset name to folder name: %s.",
+                    d,
+                )
                 dataset_name = d
 
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
@@ -908,9 +941,7 @@ def assign_dataset():
         )
 
         names_files = list_individual_reports(dataset_path)
-        app.logger.debug(
-            "%s reports found at %s", len(names_files), dataset_path
-        )
+        app.logger.debug("%s reports found at %s", len(names_files), dataset_path)
         new_names = names_files
         if repeat:
             names_repeated = repeat_reports(new_names, number_rep)

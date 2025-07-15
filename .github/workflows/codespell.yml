@@ -1,0 +1,18 @@
+name: Codespell
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  codespell:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install codespell
+        run: |
+          python -m pip install --upgrade pip
+          pip install codespell
+      - name: Run codespell
+        run: codespell --check-hidden -q 3
