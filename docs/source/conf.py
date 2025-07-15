@@ -18,7 +18,7 @@
 # -- Project information -----------------------------------------------------
 
 project = 'qkay'
-copyright = '2024 The NiPreps Developers'
+copyright = 'The NiPreps Developers'
 author = 'The NiPreps Developers'
 
 # The full version, including alpha/beta/rc tags
