@@ -56,6 +56,7 @@ $('#qcextra-comments').bind('input propertychange', function() {
 });
 
 $( '#btn-submit' ).click( function() {
+    var btnSubmit = $(this); // Cache the button element
 
     var payload = read_form();
     var md5sum = "d4fc849b23e85035b7a0798fb2eaf124";
@@ -77,16 +78,14 @@ $( '#btn-submit' ).click( function() {
     ratingReq.setRequestHeader("Authorization", authorization);
     ratingReq.onload = function () {
         status = ratingReq.status;
-        $('#btn-submit').removeClass('btn-primary');
-        $('#btn-submit').attr('disabled', true);
-        $('#btn-submit').attr('aria-disabled', true);
-        $('#btn-submit').prop('disabled');
-        $('#btn-submit').addClass('disabled');
-        $('#btn-submit').removeClass('active');
+        btnSubmit.removeClass('btn-primary disabled active'); // Remove additional classes
+        btnSubmit.attr('disabled', true).attr('aria-disabled', true); // Disable the button
+        btnSubmit.addClass('btn-success').html('Posted!'); // Change button text to "Posted!"
 
-    	$('#btn-submit').addClass('btn-success');
-	$('#btn-submit').html('Posted!');
-
+        // Set timeout to revert button state after 0.8 seconds
+        setTimeout(function() {
+            btnSubmit.removeClass('btn-success').attr('disabled', false).removeAttr('aria-disabled').addClass('btn-primary').html('Submit');
+        }, 800);
     };
     ratingReq.send(JSON.stringify(params));
 });
