@@ -36,6 +36,14 @@ To run qkay using Docker Compose, follow these steps:
     6. Once you have logged in, go to the Admin panel and change your password to something more secure.
     7. Once you have logged in, go to the Admin panel and add a dataset by clicking on the "Add Dataset" button. You will find the list of all datasets in the folder indicated in the .env file. Select the dataset you want to add.
 
+# Python package
+Qkay is organized as a Python package. External scripts can import the Flask
+application directly with:
+
+```python
+from qkay import app
+```
+
 # Contributing
 We welcome contributions to Qkay. Please read the [contributing guide](https://www.nipreps.org/community/CONTRIBUTING/) to get started.
 # License
