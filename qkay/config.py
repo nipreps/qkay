@@ -30,6 +30,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 """Utilities: Jinja2 templates."""
+
 from io import open  # pylint: disable=W0622
 
 
@@ -65,15 +66,11 @@ class IndividualTemplate(Template):
     """Specific template for the individual report. From MRIQC"""
 
     def __init__(self):
-        super(IndividualTemplate, self).__init__(
-            "./templates/reports.html"
-        )
+        super(IndividualTemplate, self).__init__("./templates/reports.html")
 
 
 class IndexTemplate(Template):
     """Specific template for the index file of the reports."""
 
     def __init__(self):
-        super(IndexTemplate, self).__init__(
-            "./templates/index.html"
-        )
+        super(IndexTemplate, self).__init__("./templates/index.html")

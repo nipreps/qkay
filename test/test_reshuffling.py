@@ -21,6 +21,7 @@
 #     https://www.nipreps.org/community/licensing/
 #
 """Unit test testing the ramspling functions in index.py."""
+
 from qkay.index import (
     anonymize_reports,
     repeat_reports,
@@ -65,4 +66,3 @@ def test_repeat_reports():
 
     assert len(repeated_list) == len(original_list) + number_of_subjects_to_repeat
     assert all(item in repeated_list for item in original_list)
-
