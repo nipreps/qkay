@@ -820,26 +820,42 @@ def create_dataset():
 
             # Get dataset name from the data_description.json file if it exists
             # otherwise, use the folder name
-            desc_file = ""
-            desc_files = glob.glob(os.path.join(dataset_path, "**", "dataset_description.json"), recursive=True)
+
+            desc_files = glob.glob(
+                os.path.join(dataset_path, "**", "dataset_description.json"),
+                recursive=True,
+            )
             if len(desc_files) > 1:
-                app.logger.warning("More than one dataset_description.json was found!: %s .", desc_files) 
-            
-            desc_file = desc_files[0]
-            app.logger.debug("dataset_description.json found at %s.", desc_file) 
-            if desc_file:
+                app.logger.warning(
+                    "More than one dataset_description.json was found!: %s .",
+                    desc_files,
+                )
+
+            if desc_files:
+                desc_file = desc_files[0]
+                app.logger.debug(
+                    "dataset_description.json found at %s.", desc_file
+                )
                 with open(desc_file, "r") as file:
                     data_description = json.load(file)
                     dataset_name = data_description["Name"]
-                    app.logger.info("The dataset name %s was assigned based on the name in %s", dataset_name, desc_file) 
-                # If the name of the dataset is the default MRIQC value, use the folder name instead
+                    app.logger.info(
+                        "The dataset name %s was assigned based on the name in %s",
+                        dataset_name,
+                        desc_file,
+                    )
                 if dataset_name == "MRIQC - MRI Quality Control":
-                    app.logger.info("The dataset name is the default of MRIQC which is not informative, using folder name instead: %s.", d) 
+                    app.logger.info(
+                        "The dataset name is the default of MRIQC which is not informative, using folder name instead: %s.",
+                        d,
+                    )
                     dataset_name = d
             else:
-                app.logger.info("No dataset_description.json found, assigning dataset name to folder name: %s.", d) 
+                app.logger.info(
+                    "No dataset_description.json found, assigning dataset name to folder name: %s.",
+                    d,
+                )
                 dataset_name = d
-
             dataset = Dataset(name=dataset_name, path_dataset=dataset_path)
             existing_dataset = Dataset.objects(name=dataset_name).first()
             if not dataset.validate_dataset():
