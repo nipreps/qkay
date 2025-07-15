@@ -66,4 +66,13 @@ They will be able to update their password after logging in.
 
 7. The user can now log in and start rating the images in the dataset assigned to them.
 
+Using Q'kay in Python
+---------------------
+
+You can import the Flask application directly from the package:
+
+.. code-block:: python
+
+    from qkay import app
+
 
