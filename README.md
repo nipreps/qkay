@@ -16,8 +16,8 @@ The application will be reachable on  http://localhost.
 Here are the steps you need to follow to set up the environment variables:
 
     1. Open the .env file in a text editor.
-    2. Set the DATABASE_PATH variable to the path of the database file you want to use.
-    3. Set the DATASETS_PATH variable to the path of the folder containing all the datasets you want to use. If you have more than one dataset, provide the path to the parent folder.
+    2. Set the `DB_PATH` variable to the directory where MongoDB should store its data.
+    3. Set the `DATASETS_PATH` variable to the path of the folder containing all the datasets you want to use. If you have more than one dataset, provide the path to the parent folder.
     4. Save the .env file.
 
 To run qkay using Docker Compose, follow these steps:

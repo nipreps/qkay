@@ -164,18 +164,16 @@ class Dataset(db.Document):
     path_dataset = db.StringField()
 
     def validate_dataset(self):
-        """
-        Validate if the dataset directory exists and contains HTML files.
-        """
-        # Check whether the folder contains at least one HTML file
-        for _, _, files in os.walk(self.path_dataset):
-            for file in files:
-                if file.endswith(".html"):
+        """Return ``True`` if ``path_dataset`` exists and contains HTML files."""
+        if not op.exists(self.path_dataset):
+            return False
+
+        for _root, _dirs, files in os.walk(self.path_dataset):
+            for fname in files:
+                if fname.endswith(".html"):
                     return True
 
-        return op.exists(self.path_dataset) and any(
-            file.endswith(".html") for _, _, file in os.walk(self.path_dataset)
-        )
+        return False
 
 
 class Inspection(db.Document):
@@ -185,7 +183,6 @@ class Inspection(db.Document):
 
         Attributes
         ----------
-    git rebase --abort
         meta : dict
             mongodb collection
         dataset : str
