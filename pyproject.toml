@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qkay"
+version = "0.1.0"
+description = "Flask web application"
+authors = [{name = "The NiPreps Developers", email = "nipreps@gmail.com"}]
+license = {file = "LICENSE"}
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "beautifulsoup4==4.11.2",
+    "Flask==2.2.2",
+    "Flask_Login==0.6.2",
+    "flask_mongoengine==1.0.0",
+    "Flask_WTF==1.1.1",
+    "Jinja2==3.1.2",
+    "mongoengine==0.26.0",
+    "numpy",
+    "Werkzeug==2.2.2",
+    "WTForms==3.0.1",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[project.scripts]
+qkay = "qkay.wsgi:app"
