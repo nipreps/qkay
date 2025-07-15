@@ -45,7 +45,7 @@ from flask_login import (
 )
 from flask_mongoengine import MongoEngine
 from flask_wtf import FlaskForm
-from index import (
+from .index import (
     anonymize_reports,
     list_individual_reports,
     repeat_reports,
