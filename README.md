@@ -5,8 +5,10 @@ Qkay is a Docker containerized web application developed using Flask, which serv
 To run the Qkay package using Docker Compose, you'll need to have Docker and Docker Compose installed on your machine. You can download and install them from the following links:
 [Docker](https://docs.docker.com/get-docker/)
 [Docker-compose](https://docs.docker.com/compose/install/)
+
 # Supported Python Versions
-Qkay supports Python 3.7 through 3.11.
+*Q'Kay* supports Python 3.7 through 3.11.
+
 # Usage
 Before using qkay, you will need to set up the necessary environment variables by completing the .env file. In this file, you should provide the path to the database and the path to all datasets that you want to use. If there is more than one dataset, the path should be the parent folder.
 
