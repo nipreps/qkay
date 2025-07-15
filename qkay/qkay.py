@@ -434,9 +434,13 @@ def login():
         admin.save()
 
     if current_user.is_authenticated:
+        if current_user.is_admin:
+            return redirect("/admin_panel")
         return redirect("/" + current_user.username)
     if request.method == "POST":
         if current_user.is_authenticated:
+            if current_user.is_admin:
+                return redirect("/admin_panel")
             return redirect("/" + current_user.username)
 
         if form.validate_on_submit():
@@ -446,6 +450,8 @@ def login():
                 flash("Invalid username or password")
                 return redirect(url_for("login"))
             login_user(user)
+            if user.is_admin:
+                return redirect("/admin_panel")
             return redirect("/" + current_user.username)
     return render_template(
         op.relpath("./templates/login.html", template_folder), form=form
@@ -561,7 +567,7 @@ def add_admin():
     route the app to the admin management page
     """
     if current_user.is_admin:
-        list_users = User.objects.all().values_list("username")
+        list_users = User.objects(is_admin=False).values_list("username")
         if request.method == "POST":
             username_selected = list_users[int(request.form.get("users dropdown"))]
             user = User.objects(Q(username=username_selected))
@@ -729,21 +735,15 @@ def info_user(username):
     if request.method == "POST":
         pass
     if current_user.is_admin:
-        return render_template(
-            op.relpath("./templates/user_panel_admin_version.html", template_folder),
-            list_inspections_assigned=list_inspections_assigned,
-            number_inspections=len(list_inspections_assigned),
-            username=username,
-            route_list=route_list,
-        )
-    else:
-        return render_template(
-            op.relpath("./templates/user_panel.html", template_folder),
-            list_inspections_assigned=list_inspections_assigned,
-            number_inspections=len(list_inspections_assigned),
-            username=username,
-            route_list=route_list,
-        )
+        return redirect("/admin_panel")
+
+    return render_template(
+        op.relpath("./templates/user_panel.html", template_folder),
+        list_inspections_assigned=list_inspections_assigned,
+        number_inspections=len(list_inspections_assigned),
+        username=username,
+        route_list=route_list,
+    )
 
 
 @app.route("/index-<username>/<dataset>", methods=["POST", "GET"])
@@ -787,7 +787,7 @@ def admin_panel():
     """
 
     if current_user.is_admin:
-        list_users = User.objects.all().values_list("username")
+        list_users = User.objects(is_admin=False).values_list("username")
         list_datasets = Dataset.objects.all().values_list("name")
         list_admin = User.objects(Q(is_admin=True)).values_list("username")
         list_inspection = [
@@ -887,13 +887,17 @@ def assign_dataset():
     """
     Assign a dataset to a user
     """
-    list_users = User.objects.all().values_list("username")
+    list_users = User.objects(is_admin=False).values_list("username")
     list_datasets = Dataset.objects.all().values_list("name")
     if request.method == "POST":
         dataset_selected = request.form.get("datasets dropdown")
         app.logger.debug("Dataset %s selected for inspection", dataset_selected)
         username = request.form.get("users dropdown")
         app.logger.debug("User %s selected for inspection", username)
+        user_obj = User.objects(username=username).first()
+        if user_obj is None or user_obj.is_admin:
+            flash("Cannot assign dataset to admin user", "error")
+            return redirect(url_for("assign_dataset"))
         randomize = request.form.get("option_randomize")
         app.logger.debug("Randomize %s", randomize)
         repeat = request.form.get("option_repeat")
